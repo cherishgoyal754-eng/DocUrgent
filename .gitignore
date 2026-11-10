@@ -1,0 +1,59 @@
+# =====================================================================
+# DocUrgent 24/7 — Production .gitignore
+# Prevents secrets, passwords, medical records, uploads, and local DBs
+# =====================================================================
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# Local Database Files & Journals (Zero accidental data leaks)
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+docurgent/docurgent.db*
+
+# Uploaded Medical Documents & Patient Records (Strict HIPAA/GDPR Compliance)
+docurgent/uploads/*
+!docurgent/uploads/.gitkeep
+
+# Automated System Backups (Must be stored in dedicated encrypted S3/GCS)
+docurgent/backups/*
+!docurgent/backups/.gitkeep
+docurgent_backup_*
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / Packaging (if applicable)
+node_modules/
+dist/
+build/
+*.egg-info/
