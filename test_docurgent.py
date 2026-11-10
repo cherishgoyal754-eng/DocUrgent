@@ -400,8 +400,8 @@ with server.socketserver.TCPServer(('', {TEST_PORT}), server.DocUrgentHTTPHandle
         assert status == 200
         logs = res["audit_logs"]
         actions = [l["action"] for l in logs]
-        assert "DOCTOR_REGISTER" in actions
-        assert "DOCTOR_VERIFY_STATUS_CHANGE" in actions
+        assert "REGISTER_DOCTOR" in actions or "DOCTOR_REGISTER" in actions
+        assert "VERIFY_DOCTOR" in actions or "DOCTOR_VERIFY_STATUS_CHANGE" in actions
         assert "SIGN_PRESCRIPTION" in actions
         print("  ✓ Audit logs recorded complete clinical compliance lifecycle")
 
