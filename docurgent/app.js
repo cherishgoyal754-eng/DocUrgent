@@ -1488,34 +1488,126 @@ const App = {
   // ============================================================================
   // ADMIN WORKSPACE (DOCTOR VERIFICATION & HEALTHCARE OVERSIGHT)
   // ============================================================================
+  // ADMIN & SUPER ADMIN OVERSIGHT
+  // ============================================================================
   async initAdminWorkspace() {
-    // Authenticate as Admin if not already
-    if (!state.authToken || (state.currentUser && state.currentUser.role !== 'admin')) {
-      await this.loginAdminDefault();
+    // Authenticate as Admin/Super Admin if not already
+    if (!state.authToken || (state.currentUser && !['admin', 'super_admin'].includes(state.currentUser.role))) {
+      this.openAdminLoginModal();
+      return;
     }
+    this.updateAdminHeaderProfile();
     await this.fetchAdminData();
   },
 
-  async loginAdminDefault() {
+  updateAdminHeaderProfile() {
+    if (!state.currentUser) return;
+    const isSuper = state.currentUser.role === 'super_admin';
+    const pill = document.querySelector('.active-profile-pill');
+    if (pill) {
+      pill.innerHTML = `
+        <span class="admin-badge-dot" style="background:${isSuper ? '#8b5cf6' : '#0284c7'};"></span>
+        <span>${isSuper ? '👑 Super Admin (Owner)' : '🛡️ Medical Director'}: ${state.currentUser.email || 'Director'}</span>
+      `;
+    }
+  },
+
+  openAdminLoginModal() {
+    const modal = document.getElementById('adminLoginModal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeAdminLoginModal() {
+    const modal = document.getElementById('adminLoginModal');
+    if (modal) modal.style.display = 'none';
+    if (!state.authToken || (state.currentUser && !['admin', 'super_admin'].includes(state.currentUser.role))) {
+      this.exitToGate();
+    }
+  },
+
+  async submitAdminLogin(event) {
+    event.preventDefault();
+    const email = document.getElementById('adminLoginEmail').value.trim();
+    const password = document.getElementById('adminLoginPassword').value.trim();
+    const mfa = document.getElementById('adminLoginMfa').value.trim();
+
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          identifier: 'admin@docurgent.org',
-          password: 'DocAdmin2026!'
+          identifier: email,
+          password: password,
+          mfa_code: mfa,
+          recovery_code: mfa
         })
       });
       const data = await res.json();
+
+      if (data.mfa_required) {
+        alert("Two-Factor Authentication is enabled on this account. Please enter your 6-digit Authenticator code or recovery code.");
+        document.getElementById('adminLoginMfa').focus();
+        return;
+      }
+
       if (data.success && data.session) {
+        if (!['admin', 'super_admin'].includes(data.session.role)) {
+          alert("Access Denied: This account does not possess platform administration privileges.");
+          return;
+        }
         state.authToken = data.session.token;
         state.currentUser = data.session;
         sessionStorage.setItem(STORAGE_KEYS.TOKEN, state.authToken);
-        sessionStorage.setItem(STORAGE_KEYS.ROLE, 'admin');
+        sessionStorage.setItem(STORAGE_KEYS.ROLE, data.session.role);
+
+        document.getElementById('adminLoginModal').style.display = 'none';
+        this.updateAdminHeaderProfile();
+        await this.fetchAdminData();
+      } else {
+        alert("Authentication failed: " + (data.error || "Invalid credentials"));
       }
     } catch (e) {
-      console.warn('Admin login error:', e);
+      alert("Error contacting server: " + e.message);
     }
+  },
+
+  switchAdminTab(tabName, event) {
+    if (event) {
+      document.querySelectorAll('.admin-tab-nav .filter-pill').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    const sections = [
+      'adminSectionDoctors', 'adminSectionPatients', 'adminSectionConsultations',
+      'adminSectionFinance', 'adminSectionSettings', 'adminSectionStorage',
+      'adminSectionBackups', 'adminSectionAudit'
+    ];
+    sections.forEach(s => {
+      const el = document.getElementById(s);
+      if (el) el.style.display = 'none';
+    });
+
+    const targetMap = {
+      'doctors': 'adminSectionDoctors',
+      'patients': 'adminSectionPatients',
+      'consultations': 'adminSectionConsultations',
+      'finance': 'adminSectionFinance',
+      'settings': 'adminSectionSettings',
+      'storage': 'adminSectionStorage',
+      'backups': 'adminSectionBackups',
+      'audit': 'adminSectionAudit'
+    };
+
+    const targetEl = document.getElementById(targetMap[tabName] || 'adminSectionDoctors');
+    if (targetEl) targetEl.style.display = 'block';
+
+    // Fetch tab-specific data
+    if (tabName === 'patients') this.fetchAdminPatients();
+    if (tabName === 'consultations') this.fetchAdminConsultations();
+    if (tabName === 'finance') this.fetchAdminFinance();
+    if (tabName === 'settings') this.fetchAdminSettings();
+    if (tabName === 'storage') this.fetchAdminStorage();
+    if (tabName === 'backups') this.fetchAdminBackups();
   },
 
   async fetchAdminData() {
@@ -1580,7 +1672,7 @@ const App = {
       const data = await res.json();
       if (data.success) {
         const tbody = document.getElementById('adminAuditTableBody');
-        tbody.innerHTML = data.audit_logs.slice(0, 15).map(l => `
+        tbody.innerHTML = data.audit_logs.slice(0, 25).map(l => `
           <tr>
             <td><small>${l.created_at.slice(0, 19).replace('T', ' ')}</small></td>
             <td><span class="badge-status ${l.role}">${l.role}</span></td>
@@ -1594,11 +1686,492 @@ const App = {
     } catch (e) {}
   },
 
+  async fetchAdminPatients() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/patients`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const tbody = document.getElementById('adminPatientTableBody');
+        tbody.innerHTML = data.patients.map(p => `
+          <tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.age || '—'}</td>
+            <td><code>${p.phone}</code></td>
+            <td>${p.emergency_contact || 'None'}</td>
+            <td><small>${p.created_at ? p.created_at.slice(0, 10) : '—'}</small></td>
+            <td><strong>${p.total_consultations}</strong></td>
+            <td>
+              <button class="btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="App.inspectPatientPhi('${p.id}')">
+                🔒 Inspect PHI (Audited)
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {}
+  },
+
+  async inspectPatientPhi(patientId) {
+    const reason = prompt("HIPAA / Clinical Audit Requirement:\nPlease state the clinical justification reason for accessing this patient's protected medical records:");
+    if (!reason) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/patient-records-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ patient_id: patientId, reason: reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const p = data.patient;
+        const consults = data.consultations;
+        const rx = data.prescriptions;
+
+        const container = document.getElementById('adminPhiContent');
+        container.innerHTML = `
+          <div style="background:var(--primary-light); padding:12px; border-radius:8px; margin-bottom:16px;">
+            <strong>Patient Name:</strong> ${p.name} | <strong>Phone:</strong> ${p.phone} | <strong>Emergency Contact:</strong> ${p.emergency_contact || 'None'}
+            <br><strong>Known Allergies:</strong> ${p.allergies || 'None reported'} | <strong>Medical History:</strong> ${p.medical_history || 'None reported'}
+          </div>
+          <h4>Consultation Records (${consults.length})</h4>
+          ${consults.map(c => `
+            <div style="border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:8px;">
+              <strong>Date:</strong> ${c.created_at.slice(0, 19).replace('T', ' ')} | <strong>Category:</strong> ${c.category.toUpperCase()} | <strong>Status:</strong> ${c.status}
+              <br><strong>Reported Condition:</strong> ${c.condition_desc}
+            </div>
+          `).join('') || '<p style="color:var(--text-muted);">No prior consultations recorded.</p>'}
+          <h4 style="margin-top:16px;">Prescriptions & Clinical Assessments (${rx.length})</h4>
+          ${rx.map(r => `
+            <div style="border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:8px;">
+              <strong>Diagnosis:</strong> ${r.diagnosis} | <strong>Assessment:</strong> ${r.clinical_assessment}
+              <br><strong>Signature Hash:</strong> <code>${r.digital_signature_hash}</code> (Signed: ${r.signed_at.slice(0, 19).replace('T', ' ')})
+            </div>
+          `).join('') || '<p style="color:var(--text-muted);">No prescriptions issued yet.</p>'}
+        `;
+        document.getElementById('adminPhiModal').style.display = 'flex';
+      } else {
+        alert("Access error: " + data.error);
+      }
+    } catch (e) {
+      alert("Error accessing PHI: " + e.message);
+    }
+  },
+
+  closeAdminPhiModal() {
+    const modal = document.getElementById('adminPhiModal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async fetchAdminConsultations() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/consultations`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const tbody = document.getElementById('adminConsultationsTableBody');
+        tbody.innerHTML = data.consultations.map(c => `
+          <tr>
+            <td><code>${c.id}</code></td>
+            <td>${c.patient_name || 'Patient'}</td>
+            <td>${c.doctor_name || '<em style="color:#f59e0b;">Waiting...</em>'}</td>
+            <td><span class="badge-status ${c.category}">${c.category}</span></td>
+            <td>${DEFAULT_CURRENCY_SYMBOL}${c.fee}</td>
+            <td><span class="badge-status ${c.status}">${c.status}</span></td>
+            <td><strong>${c.payment_status || 'pending'}</strong></td>
+            <td><small>${c.created_at.slice(0, 16).replace('T', ' ')}</small></td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {}
+  },
+
+  async fetchAdminFinance() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/payments`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const tbody = document.getElementById('adminFinanceTableBody');
+        tbody.innerHTML = data.payments.map(p => `
+          <tr>
+            <td><code>${p.transaction_ref}</code></td>
+            <td>${p.patient_name || 'Patient'}</td>
+            <td>${p.doctor_name || 'Doctor'}</td>
+            <td><strong>${DEFAULT_CURRENCY_SYMBOL}${p.amount_total.toFixed(2)}</strong></td>
+            <td>${DEFAULT_CURRENCY_SYMBOL}${p.doctor_payout.toFixed(2)}</td>
+            <td>${DEFAULT_CURRENCY_SYMBOL}${p.platform_cut.toFixed(2)}</td>
+            <td><span class="badge-status ${p.status}">${p.status}</span></td>
+            <td>
+              ${p.status === 'completed' ? `
+                <button class="btn-secondary" style="padding:3px 8px; font-size:11px; color:#ef4444;" onclick="App.processRefund('${p.id}')">
+                  Issue Refund
+                </button>
+              ` : '—'}
+            </td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {}
+  },
+
+  async processRefund(paymentId) {
+    const reason = prompt("Enter administrative reason for issuing this refund:");
+    if (!reason) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ payment_id: paymentId, reason: reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Refund processed successfully!");
+        this.fetchAdminFinance();
+      } else {
+        alert("Refund failed: " + data.error);
+      }
+    } catch (e) {
+      alert("Error processing refund: " + e.message);
+    }
+  },
+
+  async fetchAdminSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/settings`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const s = data.settings;
+        const commInput = document.getElementById('settingCommissionInput');
+        if (commInput && s.platform_commission_percent) {
+          commInput.value = s.platform_commission_percent;
+        }
+
+        const isMaint = s.maintenance_mode === 'true';
+        const label = document.getElementById('maintenanceStatusLabel');
+        const btn = document.getElementById('btnToggleMaintenance');
+        if (label) {
+          label.textContent = isMaint ? 'ON (Platform Restricted)' : 'OFF (Online)';
+          label.style.color = isMaint ? '#ef4444' : '#16a34a';
+        }
+        if (btn) {
+          btn.textContent = isMaint ? 'Disable Maintenance Mode' : 'Enable Maintenance Mode';
+        }
+      }
+    } catch (e) {}
+
+    // Fetch Administrators list
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/administrators`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const tbody = document.getElementById('adminAccountsTableBody');
+        tbody.innerHTML = data.administrators.map(a => `
+          <tr>
+            <td><strong>${a.email}</strong></td>
+            <td><code>${a.phone || '—'}</code></td>
+            <td><span class="badge-status ${a.role}">${a.role.toUpperCase()}</span></td>
+            <td>${a.mfa_enabled ? '🔐 TOTP Active' : 'Password Only'}</td>
+            <td><small>${a.last_login_at ? a.last_login_at.slice(0, 16).replace('T', ' ') : 'Never'}</small></td>
+            <td>${a.is_active ? '<span style="color:#16a34a; font-weight:600;">Active</span>' : '<span style="color:#ef4444;">Suspended</span>'}</td>
+            <td>
+              ${a.role !== 'super_admin' ? `
+                <button class="btn-secondary" style="padding:3px 8px; font-size:11px; color:#ef4444;" onclick="App.revokeAdministrator('${a.id}')">
+                  Revoke
+                </button>
+              ` : '<em>Owner</em>'}
+            </td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {}
+  },
+
+  async updateCommissionRate() {
+    const val = document.getElementById('settingCommissionInput').value;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ settings: { platform_commission_percent: val } })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Platform commission rate updated to ${val}%`);
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (e) {
+      alert("Error updating commission: " + e.message);
+    }
+  },
+
+  async toggleMaintenanceMode() {
+    const isCurrentlyActive = document.getElementById('maintenanceStatusLabel').textContent.includes('ON');
+    const newState = isCurrentlyActive ? 'false' : 'true';
+
+    if (!confirm(`Are you sure you want to ${isCurrentlyActive ? 'DISABLE' : 'ENABLE'} platform maintenance mode?`)) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ settings: { maintenance_mode: newState } })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Maintenance mode is now: ${newState === 'true' ? 'ENABLED' : 'DISABLED'}`);
+        this.fetchAdminSettings();
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  },
+
+  openNewAdminModal() {
+    const modal = document.getElementById('adminNewAdminModal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeNewAdminModal() {
+    const modal = document.getElementById('adminNewAdminModal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async submitCreateAdministrator(event) {
+    event.preventDefault();
+    const email = document.getElementById('newAdminEmail').value.trim();
+    const phone = document.getElementById('newAdminPhone').value.trim();
+    const password = document.getElementById('newAdminPassword').value.trim();
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/administrators`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ email: email, phone: phone, password: password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Administrator ${email} successfully created.`);
+        this.closeNewAdminModal();
+        this.fetchAdminSettings();
+      } else {
+        alert("Error creating administrator: " + data.error);
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  },
+
+  async revokeAdministrator(userId) {
+    if (!confirm("Are you sure you want to revoke this administrator account?")) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/administrators/revoke`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ user_id: userId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Administrator privileges revoked.");
+        this.fetchAdminSettings();
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  },
+
+  async fetchAdminStorage() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/storage-health`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const s = data.storage;
+        document.getElementById('storageUsedValue').textContent = `${s.used_mb} MB`;
+        document.getElementById('storageQuotaHint').textContent = `Quota: ${s.quota_mb} MB (${s.percent_used}% used in ${s.file_count} files)`;
+        const alertEl = document.getElementById('storageAlertValue');
+        alertEl.textContent = s.alert_level;
+        alertEl.style.color = s.alert_level === 'NORMAL' ? '#16a34a' : (s.alert_level === 'CRITICAL' ? '#ef4444' : '#f59e0b');
+      }
+    } catch (e) {}
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/database-health`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const d = data.database;
+        document.getElementById('dbSizeValue').textContent = `${d.size_mb} MB`;
+        document.getElementById('dbEngineHint').textContent = d.database_engine;
+        const integEl = document.getElementById('dbIntegrityValue');
+        integEl.textContent = d.integrity_status.toUpperCase();
+        integEl.style.color = d.integrity_status === 'ok' ? '#16a34a' : '#ef4444';
+      }
+    } catch (e) {}
+  },
+
+  async runDatabaseVacuum() {
+    if (!confirm("Run SQLite VACUUM and storage defragmentation now?")) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/database-vacuum`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Database vacuum and optimization completed successfully!");
+        this.fetchAdminStorage();
+      } else {
+        alert("Vacuum error: " + data.error);
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  },
+
+  async fetchAdminBackups() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/backup-status`, {
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        const b = data.backup_status;
+        document.getElementById('lastBackupTimeValue').textContent = b.last_backup_time ? b.last_backup_time.slice(0, 19).replace('T', ' ') : 'None yet';
+        document.getElementById('lastBackupStatusHint').textContent = `Status: ${b.last_backup_status || 'Pending'}`;
+        document.getElementById('backupCountValue').textContent = `${b.database_backups_count} DB / ${b.file_backups_count} Files`;
+
+        const tbody = document.getElementById('adminBackupsTableBody');
+        tbody.innerHTML = (b.recent_database_backups || []).map(snap => `
+          <tr>
+            <td><code>${snap.filename}</code></td>
+            <td>${snap.size_mb} MB</td>
+            <td><small>${snap.created_at.slice(0, 19).replace('T', ' ')}</small></td>
+            <td>
+              <button class="btn-secondary" style="padding:3px 8px; font-size:11px;" onclick="App.verifySpecificBackup('${snap.filename}')">
+                ✓ Check Hash
+              </button>
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No backups archived yet.</td></tr>';
+      }
+    } catch (e) {}
+  },
+
+  async triggerInstantBackup() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/backup-create`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.authToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Snapshot complete!\nDB: ${data.database_backup.filename}\nFiles: ${data.files_backup.filename}`);
+        this.fetchAdminBackups();
+      } else {
+        alert("Backup failed: " + JSON.stringify(data));
+      }
+    } catch (e) {
+      alert("Error triggering backup: " + e.message);
+    }
+  },
+
+  async verifyLatestBackup() {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/backup-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      alert(data.message || (data.success ? "Backup integrity verified successfully!" : "Verification failed"));
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  },
+
+  async verifySpecificBackup(filename) {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/backup-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({ filename: filename })
+      });
+      const data = await res.json();
+      alert(data.message || (data.success ? "Integrity check passed!" : "Integrity check failed"));
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  },
+
   async adminChangeDocStatus(docId, newStatus) {
     if (!confirm(`Are you sure you want to change doctor verification status to: ${newStatus.toUpperCase()}?`)) {
       this.fetchAdminData();
       return;
     }
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/doctor-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.authToken}`
+        },
+        body: JSON.stringify({
+          doctor_id: docId,
+          status: newStatus,
+          notes: 'Status updated via Admin Portal'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Doctor status successfully updated to: ${newStatus.toUpperCase()}`);
+        this.fetchAdminData();
+      }
+    } catch (e) {
+      alert('Error updating status: ' + e.message);
+    }
+  },
     try {
       const res = await fetch(`${API_BASE}/api/admin/doctor-verify`, {
         method: 'POST',

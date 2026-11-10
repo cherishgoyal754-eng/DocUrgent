@@ -1,0 +1,41 @@
+name: DocUrgent CI & Automated Verification
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  verify:
+    name: Run 32-Point Clinical & Security Verification Suite
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Verify Project File Integrity
+      run: |
+        python3 -m py_compile docurgent/server.py
+        python3 -m py_compile docurgent/db.py
+        python3 -m py_compile docurgent/backup_manager.py
+        python3 -m py_compile docurgent/bootstrap_superadmin.py
+
+    - name: Run Database Migrations & Integrity Check
+      run: |
+        python3 docurgent/db.py
+
+    - name: Run Super Admin Bootstrap Test
+      run: |
+        python3 docurgent/bootstrap_superadmin.py --email "owner@docurgent.in" --password "OwnerDocUrgent2026!#" --reset
+
+    - name: Run Comprehensive 32-Point Test Suite
+      run: |
+        python3 test_docurgent.py
