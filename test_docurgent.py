@@ -83,8 +83,9 @@ import sys
 sys.path.insert(0, '{os.path.join(DIRECTORY, "docurgent")}')
 import server
 server.PORT = {TEST_PORT}
-server.socketserver.TCPServer.allow_reuse_address = True
-with server.socketserver.TCPServer(('', {TEST_PORT}), server.DocUrgentHTTPHandler) as httpd:
+server.socketserver.ThreadingTCPServer.allow_reuse_address = True
+with server.socketserver.ThreadingTCPServer(('', {TEST_PORT}), server.DocUrgentHTTPHandler) as httpd:
+    httpd.daemon_threads = True
     httpd.serve_forever()
 """])
     time.sleep(2)

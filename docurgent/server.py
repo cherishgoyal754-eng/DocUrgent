@@ -1969,9 +1969,10 @@ def find_available_port(start_port=8095):
 if __name__ == "__main__":
     active_port = find_available_port(PORT)
     server_address = ("", active_port)
-    socketserver.TCPServer.allow_reuse_address = True
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
 
-    with socketserver.TCPServer(server_address, DocUrgentHTTPHandler) as httpd:
+    with socketserver.ThreadingTCPServer(server_address, DocUrgentHTTPHandler) as httpd:
+        httpd.daemon_threads = True
         comm_pct = db.get_setting("platform_commission_percent", db.PLATFORM_COMMISSION_PERCENT)
         print("=" * 70)
         print("  🏥 DocUrgent 24/7 — Production Healthcare Server & REST API")
