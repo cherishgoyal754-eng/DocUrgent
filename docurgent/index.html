@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocUrgent 24/7 — Emergency Telehealth Portal</title>
+  <meta name="description" content="Instant emergency medical consultations. Immediate triage for eye injuries, falls from stairs, burns, and acute trauma.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="light-theme">
+
+  <!-- ================================================================= -->
+  <!-- SCREEN 1: THE GATE — "WHO ARE YOU?" (SHOWN FIRST)                 -->
+  <!-- ================================================================= -->
+  <div id="gateScreen" class="gate-screen">
+    <div class="gate-card">
+      <div class="gate-brand">
+        <div class="brand-icon large">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+        </div>
+        <div class="gate-brand-title">DocUrgent<span class="brand-accent">24/7</span></div>
+        <div class="gate-brand-sub">Emergency Telehealth & Instant Doctor Consult</div>
+      </div>
+
+      <div class="gate-prompt-box">
+        <span class="gate-badge">AUTHENTICATION PORTAL</span>
+        <h1 class="gate-question">Who are you?</h1>
+        <p class="gate-instruction">Please select your role to proceed. You will enter a dedicated interface for your needs.</p>
+        
+        <!-- Quick text input: Type Doctor, Patient, or Admin -->
+        <div class="gate-type-input-wrap">
+          <input type="text" id="roleTextInput" placeholder="Type 'Doctor', 'Patient', or 'Admin' and press Enter..." onkeydown="App.handleRoleTypeEnter(event)">
+          <button class="btn-gate-go" onclick="App.handleRoleTypeSubmit()">Enter →</button>
+        </div>
+      </div>
+
+      <div class="gate-options-grid">
+        <!-- Option A: Doctor -->
+        <div class="gate-option doctor-opt" onclick="App.chooseRole('doctor')">
+          <div class="opt-icon-circle doctor">🩺</div>
+          <div class="opt-tag doctor">Healthcare Provider</div>
+          <h3>I am a Doctor</h3>
+          <p>Register with your qualifications, degrees, hospital & achievements, set your consultation fee, and provide urgent video triage.</p>
+          <div class="opt-step-notice">
+            📝 <em>Fill out your Doctor Credential Sheet first; admin verification required</em>
+          </div>
+          <button class="btn-gate-select doctor">Continue as Doctor →</button>
+        </div>
+
+        <!-- Option B: Patient -->
+        <div class="gate-option patient-opt" onclick="App.chooseRole('patient')">
+          <div class="opt-icon-circle patient">🩹</div>
+          <div class="opt-tag patient">Emergency Care</div>
+          <h3>I am a Patient</h3>
+          <p>I or someone near me had an accident (eye injury, fall from stairs, burn, bleeding) and I need immediate doctor advice via video call.</p>
+          <div class="opt-step-notice">
+            ⚡ <em>Direct access to board-verified emergency specialists available right now</em>
+          </div>
+          <button class="btn-gate-select patient">Continue as Patient →</button>
+        </div>
+      </div>
+
+      <!-- Quick Admin Access Pill (Subtle, Clean) -->
+      <div class="gate-admin-access">
+        <span>Platform Administrator?</span>
+        <a href="javascript:void(0)" onclick="App.chooseRole('admin')" class="admin-link">Access Admin Oversight Portal →</a>
+      </div>
+
+      <div class="gate-footer">
+        <span>🔒 256-Bit Encrypted Medical Protocol</span>
+        <span>🛡️ HIPAA & Indian Telemedicine Practice Guidelines</span>
+        <span>⚖️ 85% Doctor Payout / 15% Platform Commission</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- SCREEN 2: DOCTOR CREDENTIAL REGISTRATION SHEET                    -->
+  <!-- ================================================================= -->
+  <div id="doctorOnboardingScreen" class="onboarding-screen" style="display: none;">
+    <header class="app-header mini-header">
+      <div class="header-container">
+        <div class="brand-wrapper">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="brand-title">DocUrgent<span class="brand-accent">24/7</span> <span class="header-role-indicator">Doctor Credential Sheet</span></div>
+        </div>
+        <button class="btn-exit-role" onclick="App.exitToGate()">← Back to Role Selection</button>
+      </div>
+    </header>
+
+    <main class="onboarding-main">
+      <div class="onboarding-paper">
+        <div class="onboarding-header">
+          <div class="badge-step">STEP 1: CREDENTIAL VERIFICATION</div>
+          <h2>Doctor Registration & Clinical Credential Sheet</h2>
+          <p>Enter your genuine medical degrees, medical council registration number, current working hospital, clinical achievements, and consultation fee. An administrator will review your medical credentials before granting verified status.</p>
+        </div>
+
+        <form id="doctorFullRegisterForm" onsubmit="App.submitDoctorRegistration(event)">
+          <div class="form-grid">
+            
+            <!-- Full Name & Title -->
+            <div class="form-field">
+              <label for="onboardDocName">Full Doctor Name & Honorific *</label>
+              <input type="text" id="onboardDocName" required placeholder="e.g. Dr. Jennifer Adams, MD" value="Dr. Jennifer Adams, MD">
+            </div>
+
+            <!-- Email & Phone -->
+            <div class="form-field">
+              <label for="onboardDocEmail">Professional Email Address *</label>
+              <input type="email" id="onboardDocEmail" required placeholder="e.g. jennifer.adams@hospital.org" value="jennifer.adams@docurgent.org">
+            </div>
+
+            <!-- Medical Specialty -->
+            <div class="form-field">
+              <label for="onboardDocSpecialty">Primary Specialty / Emergency Department *</label>
+              <select id="onboardDocSpecialty" required>
+                <option value="eye">Ophthalmology & Eye Trauma (Eye Injuries, Splashes, Abrasions)</option>
+                <option value="stairs">Orthopedic Trauma (Stair Falls, Fractures, Sprains, Dislocations)</option>
+                <option value="emergency" selected>Emergency & Critical Care Medicine</option>
+                <option value="pediatric">Pediatric Urgent Care (Child & Infant Accidents)</option>
+                <option value="burns">Burns, Scalds & Acute Wound Care</option>
+                <option value="general">General Physician & Urgent Medical Triage</option>
+              </select>
+            </div>
+
+            <!-- Medical Qualifications & Degrees -->
+            <div class="form-field full-width">
+              <label for="onboardDocDegrees">Medical Qualifications & Degrees *</label>
+              <input type="text" id="onboardDocDegrees" required placeholder="e.g. MBBS, MD (Emergency Medicine), Fellow in Acute Trauma Care (AIIMS / Johns Hopkins)" value="MBBS, MD (Emergency Medicine), Fellow in Trauma Care">
+              <small class="field-hint">Specify all undergraduate MBBS, postgraduate MD/MS/FRCS, and surgical fellowships.</small>
+            </div>
+
+            <!-- Medical Council Registration / License No -->
+            <div class="form-field">
+              <label for="onboardDocLicense">Medical Council License / Registration No. *</label>
+              <input type="text" id="onboardDocLicense" required placeholder="e.g. MCI-REG-774019" value="MCI-LIC-774019">
+            </div>
+
+            <!-- Current Working Hospital / Clinic -->
+            <div class="form-field">
+              <label for="onboardDocHospital">Current Working Hospital / Medical Center *</label>
+              <input type="text" id="onboardDocHospital" required placeholder="e.g. City Memorial Trauma Hospital" value="City Memorial Trauma & Emergency Hospital">
+            </div>
+
+            <!-- Clinical Experience -->
+            <div class="form-field">
+              <label for="onboardDocExp">Years of Clinical Practice *</label>
+              <input type="number" id="onboardDocExp" min="1" max="50" required value="12">
+            </div>
+
+            <!-- Emergency Consultation Fee -->
+            <div class="form-field">
+              <label for="onboardDocFee">Emergency Video Consult Fee (₹ INR / $ USD) *</label>
+              <div class="input-with-currency">
+                <span class="currency-symbol">₹</span>
+                <input type="number" id="onboardDocFee" min="100" max="10000" step="50" required value="1000" oninput="App.updateOnboardingFeePreview(this.value)">
+              </div>
+              <div class="fee-split-preview" id="onboardFeePreview">
+                Patient Pays: <strong>₹1,000</strong> | You Receive: <strong>₹850</strong> (85%) | Platform Cut: <strong>₹150</strong> (15%)
+              </div>
+            </div>
+
+            <!-- Key Achievements & Honors -->
+            <div class="form-field full-width">
+              <label for="onboardDocAchievements">Key Achievements, Honors & Clinical Experience *</label>
+              <textarea id="onboardDocAchievements" rows="2" required placeholder="List notable surgical cases, leadership roles, or medical awards...">Handled 4,200+ acute trauma & accident admissions; Former Head of Emergency Triage; Certified ACLS & ATLS Instructor.</textarea>
+            </div>
+
+            <!-- Doctor Bio & Consultation Focus -->
+            <div class="form-field full-width">
+              <label for="onboardDocBio">Doctor Bio & Emergency Focus for Patients *</label>
+              <textarea id="onboardDocBio" rows="2" required placeholder="Describe your approach to urgent video triage...">Specialized in rapid visual assessment, acute pain relief guidance, wound care, and immediate emergency stabilization before in-person hospitalization.</textarea>
+            </div>
+
+            <!-- Profile Photo -->
+            <div class="form-field">
+              <label for="onboardDocAvatar">Doctor Profile Photo URL</label>
+              <input type="text" id="onboardDocAvatar" value="https://images.unsplash.com/photo-1594824813583-02f896b7972b?auto=format&fit=crop&q=80&w=600">
+            </div>
+
+            <!-- Medical Certificate & Degree Document Upload -->
+            <div class="form-field">
+              <label>Medical Degree & License Certificate Upload (PDF/JPG) *</label>
+              <div class="file-upload-box" onclick="document.getElementById('onboardCertInput').click()">
+                <input type="file" id="onboardCertInput" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="App.handleOnboardCertUpload(this)">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text" id="onboardCertStatus">
+                  <strong>Click to attach Medical Certificate (PDF / Image)</strong>
+                  <small id="certFilenameDisplay">Medical_Board_Certification_Verified.pdf (Ready)</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Password for Doctor Login -->
+            <div class="form-field">
+              <label for="onboardDocPassword">Doctor Account Password *</label>
+              <input type="password" id="onboardDocPassword" required value="DoctorPass123!">
+            </div>
+
+          </div>
+
+          <div class="onboarding-actions">
+            <button type="button" class="btn-secondary" onclick="App.exitToGate()">Cancel</button>
+            <button type="submit" class="btn-primary large">
+              ✓ Submit Credentials for Verification →
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- SCREEN 3: DOCTOR WORKSPACE (EXCLUSIVE FOR DOCTORS)                -->
+  <!-- ================================================================= -->
+  <div id="doctorWorkspace" class="role-workspace" style="display: none;">
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand-wrapper">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="brand-title">DocUrgent<span class="brand-accent">24/7</span> <span class="role-exclusive-tag doctor">Doctor Workspace</span></div>
+        </div>
+
+        <div class="header-user-actions">
+          <div class="active-profile-pill">
+            <img src="" id="topDocAvatar" alt="Doctor" class="header-avatar-mini">
+            <span id="topDocName">Doctor</span>
+            <span class="verification-badge-pill" id="docVerificationBadge">Pending Review</span>
+          </div>
+          <button class="btn-logout" onclick="App.exitToGate()" title="Exit Doctor Portal">
+            🚪 Log Out & Switch Role
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- DOCTOR WELCOME PROFILE BAR -->
+      <div class="doctor-dashboard-header">
+        <div class="doc-welcome">
+          <div class="doc-status-avatar">
+            <img src="" id="currentDocAvatar" alt="Doctor Avatar">
+            <span class="doc-online-dot active" id="docOnlineDot"></span>
+          </div>
+          <div class="doc-meta-info">
+            <h2 id="docPortalName">Doctor Name</h2>
+            <div class="doc-badges">
+              <span class="badge-specialty" id="docPortalSpecialty">Emergency Specialty</span>
+              <span class="badge-hospital" id="docPortalHospital">Hospital Affiliation</span>
+              <span class="badge-verified" id="docVerifiedStatusTag">Pending Verification</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="doc-quick-actions">
+          <div class="availability-card">
+            <div class="avail-text">
+              <div class="avail-title">Emergency On-Duty Status:</div>
+              <div class="avail-sub" id="availStatusSub">Receiving emergency calls instantly</div>
+            </div>
+            <label class="toggle-switch large">
+              <input type="checkbox" id="doctorOnlineToggle" checked onchange="App.toggleDoctorDuty(this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <button class="btn-secondary" onclick="App.reopenDoctorOnboarding()">Edit Credentials</button>
+        </div>
+      </div>
+
+      <!-- DOCTOR VERIFICATION NOTICE IF PENDING -->
+      <div class="verification-alert-banner" id="docPendingNotice" style="display: none;">
+        <span class="alert-icon">⏳</span>
+        <div class="alert-text">
+          <strong>Credentials Under Administrative Review:</strong> Your medical certificate and council registration are being reviewed by platform medical directors. While pending, you can practice in Practice/Demo Mode. Once verified, patient calls will route to you live.
+        </div>
+      </div>
+
+      <!-- METRICS & REVENUE BREAKDOWN (SHOWING PLATFORM COMMISSION) -->
+      <section class="doc-metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon green">💵</div>
+          <div class="metric-info">
+            <span class="metric-label">Doctor Net Earnings (85%)</span>
+            <span class="metric-value" id="docNetEarnings">₹0.00</span>
+            <span class="metric-hint">Ready for direct bank transfer</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon blue">🏥</div>
+          <div class="metric-info">
+            <span class="metric-label">Consultations Completed</span>
+            <span class="metric-value" id="docConsultCount">0 Calls</span>
+            <span class="metric-hint">Emergency & acute triage sessions</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon purple">✂️</div>
+          <div class="metric-info">
+            <span class="metric-label">App Platform Cut (15%)</span>
+            <span class="metric-value" id="docAppCommission">₹0.00</span>
+            <span class="metric-hint">Covers HIPAA video infrastructure & triage</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon gold">⭐</div>
+          <div class="metric-info">
+            <span class="metric-label">Trust Score & Reviews</span>
+            <span class="metric-value" id="docRatingScore">5.0 / 5.0</span>
+            <span class="metric-hint">Based on patient feedback</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIVE CALL QUEUE & SIMULATOR TRIGGER -->
+      <section class="doctor-queue-section">
+        <div class="section-title-row">
+          <div>
+            <h3>Live Emergency Call Requests & Simulator</h3>
+            <p>Real patient requests waiting for consultation matching your specialty.</p>
+          </div>
+          <div class="queue-actions">
+            <button class="btn-simulate-call" onclick="App.triggerSimulatedEmergencyCall()">
+              ⚡ Practice Mode: Simulate Incoming Call
+            </button>
+          </div>
+        </div>
+
+        <div class="queue-list" id="doctorQueueList">
+          <div class="queue-item standby">
+            <div class="queue-pulse"></div>
+            <div class="queue-content">
+              <strong>Emergency Radar Active</strong>
+              <p>You are standing by for live patient video calls. Real incoming requests will appear here with an audible chime.</p>
+            </div>
+            <span class="status-pill active">Standing By</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOCTOR'S RECENT CONSULTATIONS & PRESCRIPTION LOGS -->
+      <section class="doctor-history-section">
+        <h3>Consultation History & Signed Prescriptions</h3>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Emergency Condition</th>
+                <th>Date / Time</th>
+                <th>Fee Charged</th>
+                <th>Your Cut (85%)</th>
+                <th>App Cut (15%)</th>
+                <th>Prescription Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="docHistoryTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- SCREEN 4: PATIENT WORKSPACE (EXCLUSIVE FOR PATIENTS)              -->
+  <!-- ================================================================= -->
+  <div id="patientWorkspace" class="role-workspace" style="display: none;">
+    <aside class="emergency-alert-banner">
+      <div class="banner-content">
+        <span class="pulse-indicator"></span>
+        <span class="banner-text"><strong>🚨 24/7 Rapid Medical Response:</strong> Board-Verified Emergency Specialists Online. Average video connect time: <strong>32 seconds</strong>.</span>
+      </div>
+      <div class="banner-actions">
+        <span class="compliance-tag">🛡️ Verified MDs Only</span>
+        <span class="commission-info">Transparent Fee: 85% Doctor • 15% App Triage</span>
+      </div>
+    </aside>
+
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand-wrapper">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="brand-text">
+            <div class="brand-title">DocUrgent<span class="brand-accent">24/7</span> <span class="role-exclusive-tag patient">Patient Portal</span></div>
+            <div class="brand-tagline">Instant Emergency Doctor Video Consultation</div>
+          </div>
+        </div>
+
+        <div class="quick-er-chip">
+          <span class="er-badge">ER SOS</span>
+          <span class="er-text">Critical Life Threat? Dial <strong>112 / 102</strong></span>
+        </div>
+
+        <div class="header-user-actions">
+          <button class="btn-logout" onclick="App.exitToGate()" title="Exit Patient Portal">
+            🚪 Exit / Switch Role
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- HERO SECTION: EMERGENCY ACTION STRIP -->
+      <section class="patient-hero">
+        <div class="hero-left">
+          <div class="urgency-badge">⚡ INSTANT EMERGENCY TRIAGE</div>
+          <h1 class="hero-title">Got Hurt? Speak with an Emergency Doctor <span class="highlight">Right Now</span></h1>
+          <p class="hero-desc">
+            Immediate video consultation for home accidents, eye injuries, stair falls, burns, and sudden health crises. Connect in under 60 seconds with 100% board-verified medical specialists.
+          </p>
+
+          <div class="trust-bullets">
+            <div class="bullet-item">
+              <span class="b-icon">👁️</span>
+              <div><strong>1. Select Your Emergency</strong> Eye injury, stair fall, burns, or trauma</div>
+            </div>
+            <div class="bullet-item">
+              <span class="b-icon">🟢</span>
+              <div><strong>2. Rapid Safety Check</strong> Clinician-reviewed pre-consult triage check</div>
+            </div>
+            <div class="bullet-item">
+              <span class="b-icon">📹</span>
+              <div><strong>3. 1-Click Video Call</strong> Show injury, get authenticated Rx & advice</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMERGENCY TRIAGE QUICK SELECTOR -->
+        <div class="hero-triage-card">
+          <div class="triage-card-header">
+            <span class="pulse-red"></span>
+            <h3>What is your emergency right now?</h3>
+          </div>
+          <p class="triage-subtitle">Select condition to immediately initiate safety check & find doctors:</p>
+          
+          <div class="triage-quick-grid" id="triageQuickButtons">
+            <button class="triage-chip" data-category="eye" onclick="App.triggerEmergencyCondition('eye')">
+              <span class="chip-emoji">👁️</span>
+              <div class="chip-info">
+                <strong>Eye Injury / Splash</strong>
+                <small>Chemical, cornea, redness, blur</small>
+              </div>
+            </button>
+            <button class="triage-chip" data-category="stairs" onclick="App.triggerEmergencyCondition('stairs')">
+              <span class="chip-emoji">🪜</span>
+              <div class="chip-info">
+                <strong>Fell From Stairs / Fracture</strong>
+                <small>Bones, acute sprain, swelling</small>
+              </div>
+            </button>
+            <button class="triage-chip" data-category="burns" onclick="App.triggerEmergencyCondition('burns')">
+              <span class="chip-emoji">🔥</span>
+              <div class="chip-info">
+                <strong>Burns & Scalds</strong>
+                <small>Boiling liquid, thermal, blisters</small>
+              </div>
+            </button>
+            <button class="triage-chip" data-category="bleeding" onclick="App.triggerEmergencyCondition('bleeding')">
+              <span class="chip-emoji">🩸</span>
+              <div class="chip-info">
+                <strong>Deep Bleeding & Cuts</strong>
+                <small>Lacerations, pressure, wound</small>
+              </div>
+            </button>
+            <button class="triage-chip" data-category="chest" onclick="App.triggerEmergencyCondition('chest')">
+              <span class="chip-emoji">🫁</span>
+              <div class="chip-info">
+                <strong>Chest Pain / Breathing</strong>
+                <small>Palpitations, acute shortness</small>
+              </div>
+            </button>
+            <button class="triage-chip" data-category="pediatric" onclick="App.triggerEmergencyCondition('pediatric')">
+              <span class="chip-emoji">🧒</span>
+              <div class="chip-info">
+                <strong>Child / Baby Emergency</strong>
+                <small>High fever, child falls, cries</small>
+              </div>
+            </button>
+            <button class="triage-chip" data-category="all" onclick="App.triggerEmergencyCondition('all')">
+              <span class="chip-emoji">🩺</span>
+              <div class="chip-info">
+                <strong>General Urgent Consult</strong>
+                <small>All available verified doctors</small>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIVE FILTER & SEARCH BAR -->
+      <section class="filters-section">
+        <div class="filters-container">
+          <div class="filter-group search-group">
+            <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="doctorSearchInput" placeholder="Search doctor name, hospital, condition, or keyword..." oninput="App.onSearchInput()">
+          </div>
+
+          <div class="filter-group">
+            <label for="specialtyFilter">Specialty:</label>
+            <select id="specialtyFilter" onchange="App.onSpecialtyChange()">
+              <option value="all">All Medical Specialties</option>
+              <option value="eye">Ophthalmology & Eye Trauma</option>
+              <option value="stairs">Orthopedic & Fracture Trauma</option>
+              <option value="emergency">Emergency Medicine</option>
+              <option value="pediatric">Pediatric Urgent Care</option>
+              <option value="general">General Physician & Triage</option>
+              <option value="burns">Burns & Wound Care</option>
+            </select>
+          </div>
+
+          <div class="filter-group toggle-group">
+            <label class="toggle-switch">
+              <input type="checkbox" id="availableOnlyToggle" checked onchange="App.onAvailabilityToggle()">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label">🟢 Available Now Only</span>
+          </div>
+
+          <div class="filter-group">
+            <label for="feeFilter">Max Fee:</label>
+            <select id="feeFilter" onchange="App.onFeeChange()">
+              <option value="all">Any Fee</option>
+              <option value="750">Under ₹750 / $25</option>
+              <option value="1000">Under ₹1,000 / $35</option>
+              <option value="1500">Under ₹1,500 / $50</option>
+            </select>
+          </div>
+
+          <button class="btn-reset-filters" onclick="App.resetFilters()">
+            Clear Filters
+          </button>
+        </div>
+
+        <div class="filter-results-bar">
+          <div class="results-text" id="resultsCountText">Showing verified doctors...</div>
+          <div class="platform-fee-notice">
+            <span>💡 <strong>Verified Credentials Only:</strong> Only doctors with validated medical licenses and clinical hospital affiliations are displayed.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOCTOR CARDS DIRECTORY GRID -->
+      <section class="doctors-directory-section">
+        <div class="doctors-grid" id="doctorsGrid">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
+      </section>
+
+      <!-- PATIENT EMERGENCY FIRST AID ADVISORY STRIP -->
+      <section class="emergency-guide-strip">
+        <div class="guide-card">
+          <div class="guide-header">
+            <span class="guide-icon">👁️</span>
+            <h4>Immediate First Aid: Eye Injury</h4>
+          </div>
+          <p><strong>DO NOT RUB:</strong> If chemical splash, flush with clean water/saline continuously for 15 minutes. Do not remove objects embedded in eye. Connect with our ophthalmologist immediately.</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-header">
+            <span class="guide-icon">🪜</span>
+            <h4>Immediate First Aid: Stair Fall</h4>
+          </div>
+          <p><strong>IMMOBILIZE:</strong> If severe pain or limb deformity, do not move the person. Apply cold ice pack wrapped in cloth. Connect with our orthopedic trauma surgeon immediately.</p>
+        </div>
+        <div class="guide-card">
+          <div class="guide-header">
+            <span class="guide-icon">🩸</span>
+            <h4>Immediate First Aid: Heavy Bleeding</h4>
+          </div>
+          <p><strong>DIRECT PRESSURE:</strong> Use a clean cloth and apply firm, continuous pressure directly on wound. Elevate injured limb above heart level. Connect with emergency doctor.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+      <div class="footer-container">
+        <div class="brand-col">
+          <div class="brand-title">DocUrgent<span class="brand-accent">24/7</span></div>
+          <p>Immediate video medical consultations for urgent accidents, eye splashes, falls, and injuries. Doctors receive direct payouts; platform commission sustains 24/7 emergency availability.</p>
+          <div class="trust-icons-row">
+            <span>🔒 256-Bit Encrypted</span>
+            <span>🛡️ HIPAA Telemedicine Compliant</span>
+            <span>👨‍⚕️ 100% Board Certified MDs</span>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Emergency Specialties</h4>
+          <ul>
+            <li><a href="javascript:void(0)" onclick="App.triggerEmergencyCondition('eye')">Eye Injuries & Chemical Splashes</a></li>
+            <li><a href="javascript:void(0)" onclick="App.triggerEmergencyCondition('stairs')">Fell from Stairs & Fractures</a></li>
+            <li><a href="javascript:void(0)" onclick="App.triggerEmergencyCondition('burns')">Burns, Scalds & Blisters</a></li>
+            <li><a href="javascript:void(0)" onclick="App.triggerEmergencyCondition('bleeding')">Deep Lacerations & Bleeding</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 DocUrgent Inc. Built for rapid emergency triage. In case of life-threatening cardiac arrest or severe unconsciousness, immediately dial 112 or visit the closest emergency department.</p>
+      </div>
+    </footer>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- SCREEN 5: ADMIN OVERSIGHT & VERIFICATION WORKSPACE                -->
+  <!-- ================================================================= -->
+  <div id="adminWorkspace" class="role-workspace" style="display: none;">
+    <header class="app-header admin-header">
+      <div class="header-container">
+        <div class="brand-wrapper">
+          <div class="brand-icon admin-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="brand-title">DocUrgent<span class="brand-accent">24/7</span> <span class="role-exclusive-tag admin">Admin Oversight Portal</span></div>
+        </div>
+
+        <div class="header-user-actions">
+          <div class="active-profile-pill">
+            <span class="admin-badge-dot"></span>
+            <span>Administrator: Medical Board Director</span>
+          </div>
+          <button class="btn-logout" onclick="App.exitToGate()" title="Exit Admin Portal">
+            🚪 Log Out & Exit
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="admin-overview-header">
+        <div>
+          <h2>Platform Healthcare Oversight & Doctor Verification</h2>
+          <p>Review doctor credentials, inspect medical certificates, approve or reject applications, and monitor platform compliance.</p>
+        </div>
+      </div>
+
+      <!-- PLATFORM STATS CARDS -->
+      <section class="doc-metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon blue">👨‍⚕️</div>
+          <div class="metric-info">
+            <span class="metric-label">Verified Active Doctors</span>
+            <span class="metric-value" id="adminVerifiedDocCount">0</span>
+            <span class="metric-hint">Approved to take real patient calls</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon gold">⏳</div>
+          <div class="metric-info">
+            <span class="metric-label">Pending Verification</span>
+            <span class="metric-value" id="adminPendingDocCount">0</span>
+            <span class="metric-hint">Awaiting license credential check</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon green">💰</div>
+          <div class="metric-info">
+            <span class="metric-label">Gross Platform Volume</span>
+            <span class="metric-value" id="adminGrossVolume">₹0.00</span>
+            <span class="metric-hint">Platform Commission: 15%</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon purple">🏥</div>
+          <div class="metric-info">
+            <span class="metric-label">Total Emergency Consults</span>
+            <span class="metric-value" id="adminTotalConsults">0</span>
+            <span class="metric-hint">Across all emergency specialties</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- DOCTOR VERIFICATION TABLE -->
+      <section class="doctor-history-section">
+        <div class="section-title-row">
+          <div>
+            <h3>Doctor Credential Verifications & Document Audit</h3>
+            <p>Every doctor must have verified registration before receiving emergency patient calls.</p>
+          </div>
+        </div>
+
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Doctor Name</th>
+                <th>Specialty & Hospital</th>
+                <th>Degrees</th>
+                <th>License Reg No</th>
+                <th>Certificate Document</th>
+                <th>Current Status</th>
+                <th>Verification Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminDoctorTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- AUDIT LOGS -->
+      <section class="doctor-history-section" style="margin-top: 24px;">
+        <h3>Telehealth Compliance Audit Logs</h3>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Timestamp (UTC)</th>
+                <th>User / Role</th>
+                <th>Action</th>
+                <th>Resource</th>
+                <th>IP Address</th>
+                <th>Audit Details</th>
+              </tr>
+            </thead>
+            <tbody id="adminAuditTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- MODAL: EMERGENCY SAFETY GATEWAY (CLINICIAN-REVIEWED CHECK)        -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="safetyGatewayModal" style="display: none;">
+    <div class="modal-card wide-modal">
+      <div class="safety-modal-header">
+        <div class="safety-icon-pulse">🚨</div>
+        <div>
+          <h2>Rapid Emergency Safety Check</h2>
+          <p>Before matching you with an online doctor, we must check for life-threatening warning signs.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeSafetyModal()">✕</button>
+      </div>
+
+      <div class="safety-questions-card">
+        <p class="safety-q-title">Is the patient currently experiencing any of the following critical warning signs?</p>
+        <div class="safety-checklist">
+          <label class="safety-check-item">
+            <input type="checkbox" id="checkUnconscious">
+            <span><strong>Loss of consciousness</strong>, sudden fainting, or inability to wake up</span>
+          </label>
+          <label class="safety-check-item">
+            <input type="checkbox" id="checkSevereChest">
+            <span><strong>Severe crushing chest pain</strong> radiating to arm/jaw or acute choking</span>
+          </label>
+          <label class="safety-check-item">
+            <input type="checkbox" id="checkBleeding">
+            <span><strong>Massive, uncontrolled arterial bleeding</strong> that does not stop with pressure</span>
+          </label>
+          <label class="safety-check-item">
+            <input type="checkbox" id="checkBreathing">
+            <span><strong>Extreme difficulty breathing</strong> or turning blue around lips</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Critical Warning Banner (Appears if any critical box is checked) -->
+      <div class="critical-warning-box" id="criticalRedAlert" style="display: none;">
+        <div class="alert-er-title">⚠️ CRITICAL LIFE-THREATENING WARNING DETECTED</div>
+        <p><strong>DO NOT WAIT FOR AN ONLINE CONSULTATION.</strong> An online video consult cannot provide in-person emergency resuscitation or CPR.</p>
+        <div class="er-contact-row">
+          <a href="tel:112" class="btn-call-112">📞 Dial 112 (National Emergency)</a>
+          <a href="tel:102" class="btn-call-102">🚑 Dial 102 (Ambulance Service)</a>
+        </div>
+        <p class="er-delay-notice">Please have someone call an ambulance immediately or transport the patient to the closest Emergency Department.</p>
+      </div>
+
+      <!-- Immediate First Aid Advisory Box (Condition specific) -->
+      <div class="safety-first-aid-box" id="safetyFirstAidBox">
+        <div class="first-aid-header">
+          <span id="firstAidEmoji">👁️</span>
+          <strong id="firstAidTitle">Immediate First-Aid Guidance While Connecting:</strong>
+        </div>
+        <p id="firstAidText">If chemical splash, continuously flush with saline or water for 15 minutes. Do not rub.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="App.closeSafetyModal()">Cancel</button>
+        <button type="button" class="btn-primary" id="btnSafetyProceed" onclick="App.submitSafetyGateway()">
+          ✓ No Life-Threatening Signs — Connect to Doctor →
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- MODAL: PATIENT INTAKE & CONSENT (MANDATORY BEFORE CALL)          -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="patientIntakeModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon">📋</div>
+        <div>
+          <h2>Patient Intake & Telehealth Consent</h2>
+          <p>Please confirm your details for clinical record accuracy and emergency safety.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeIntakeModal()">✕</button>
+      </div>
+
+      <form id="patientIntakeForm" onsubmit="App.submitPatientIntake(event)">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="intakePatientName">Patient Full Name *</label>
+            <input type="text" id="intakePatientName" required placeholder="e.g. Alex Sharma" value="Alex Sharma">
+          </div>
+
+          <div class="form-field">
+            <label for="intakePatientAge">Patient Age *</label>
+            <input type="number" id="intakePatientAge" min="1" max="110" required value="28">
+          </div>
+
+          <div class="form-field">
+            <label for="intakePatientPhone">Mobile Phone Number *</label>
+            <input type="tel" id="intakePatientPhone" required placeholder="+91 98765 43210" value="+91 98765 43210">
+          </div>
+
+          <div class="form-field full-width">
+            <label for="intakeEmergencyContact">Emergency Contact (Name & Phone) *</label>
+            <input type="text" id="intakeEmergencyContact" required placeholder="e.g. Priya (Spouse) - +91 98765 00000" value="Priya (Spouse) - +91 98765 00000">
+          </div>
+
+          <div class="form-field full-width">
+            <label for="intakeAllergies">Known Drug Allergies (if any)</label>
+            <input type="text" id="intakeAllergies" placeholder="e.g. Penicillin, Sulfa drugs, or None" value="None known">
+          </div>
+
+          <div class="form-field full-width check-group">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="intakeConsentTelehealth" checked required>
+              <span>I consent to emergency teleconsultation and medical photo triage under Telemedicine Practice Guidelines.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="App.closeIntakeModal()">Cancel</button>
+          <button type="submit" class="btn-primary">
+            Confirm & Connect with Doctor →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- VIDEO CONSULTATION ROOM (FULL-SCREEN EMERGENCY OVERLAY)           -->
+  <!-- ================================================================= -->
+  <div class="video-room-overlay" id="videoConsultationRoom" style="display: none;">
+    <div class="video-room-container">
+      
+      <!-- Video Room Top Bar -->
+      <div class="video-room-header">
+        <div class="call-doctor-info">
+          <img src="" id="callDocAvatar" alt="Doctor" class="call-avatar">
+          <div>
+            <div class="call-doc-name" id="callDocName">Dr. Sarah Jenkins, MD</div>
+            <div class="call-doc-sub" id="callDocSub">Ophthalmology & Eye Trauma Specialist • Metro Eye Emergency</div>
+          </div>
+        </div>
+
+        <div class="call-timer-badge">
+          <span class="timer-red-dot"></span>
+          <span class="timer-label">LIVE CONSULT:</span>
+          <span class="timer-digits" id="callDuration">00:00</span>
+        </div>
+
+        <div class="call-webrtc-pill" id="webrtcStatusPill">
+          <span class="conn-dot"></span>
+          <span id="webrtcStatusText">Connecting WebRTC Encrypted Stream...</span>
+        </div>
+
+        <div class="call-fee-pill">
+          <span>Fee: <strong id="callTotalFee">₹1,000</strong></span>
+          <small id="callPlatformCut">(Doctor: ₹850 | App: ₹150)</small>
+        </div>
+
+        <div class="call-top-actions">
+          <button class="btn-icon-top" onclick="App.toggleChatDrawer()" title="Toggle Chat & Photos">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="chat-badge-count" id="chatUnreadCount" style="display:none">0</span>
+          </button>
+          
+          <!-- Doctor-Only Prescription Authoring Button in Top Bar -->
+          <button class="btn-primary-sm" id="btnDoctorRxTopBar" style="display:none;" onclick="App.openDoctorPrescriptionModal()">
+            📝 Sign Prescription
+          </button>
+
+          <button class="btn-danger-sm" onclick="App.requestEndConsultation()">
+            End Consultation
+          </button>
+        </div>
+      </div>
+
+      <!-- Video Streams Grid -->
+      <div class="video-streams-grid" id="videoStreamsGrid">
+        
+        <!-- Main Remote Stream (Doctor or Patient) -->
+        <div class="stream-card doctor-stream">
+          <div class="stream-overlay-label">
+            <span class="badge-online">LIVE</span>
+            <span id="streamDocLabel">Remote Video Feed</span>
+          </div>
+
+          <!-- Real Remote WebRTC Video Element -->
+          <video id="remoteVideoElement" autoplay playsinline class="remote-video-feed"></video>
+
+          <!-- Fallback or Practice Simulation Feed -->
+          <div class="doctor-feed-simulation" id="doctorFeedSimulation">
+            <img src="" id="doctorSimulatedPhoto" class="doctor-feed-img" alt="Doctor Feed">
+            <div class="doctor-speaking-indicator">
+              <span class="sound-wave sound-wave1"></span>
+              <span class="sound-wave sound-wave2"></span>
+              <span class="sound-wave sound-wave3"></span>
+              <span class="doctor-audio-status" id="remoteAudioStatus">Audio Channel Connected</span>
+            </div>
+            <div class="clinical-watermark" id="streamWatermark">DocUrgent Telehealth • 256-bit Secure Stream</div>
+          </div>
+        </div>
+
+        <!-- Local Self Video Feed (Picture in Picture) -->
+        <div class="stream-card patient-stream" id="patientStreamCard">
+          <div class="stream-overlay-label">
+            <span id="localStreamLabel">Your Camera (Self)</span>
+          </div>
+          <video id="patientLocalVideo" autoplay playsinline muted></video>
+          <div class="camera-fallback" id="cameraFallback" style="display: none;">
+            <div class="fallback-icon">📷</div>
+            <p>Camera Off / Audio Active</p>
+            <small>Microphone Stream Active</small>
+          </div>
+        </div>
+
+        <!-- Integrated Real-time Live Chat Drawer -->
+        <aside class="call-chat-drawer" id="callChatDrawer">
+          <div class="chat-header">
+            <div class="chat-title">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Emergency Live Chat & Injury Photos</span>
+            </div>
+            <button class="btn-close-chat" onclick="App.toggleChatDrawer()">✕</button>
+          </div>
+
+          <div class="chat-messages-container" id="chatMessages">
+            <div class="chat-msg system">
+              <div class="msg-bubble">
+                🛡️ Consultation started. Encrypted line established. You can send real-time questions, attach photos of the injury, and receive verified medical guidance.
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Patient Symptom Chips -->
+          <div class="chat-quick-replies">
+            <span class="quick-title">Quick Status:</span>
+            <button type="button" class="quick-reply-pill" onclick="App.sendQuickMessage('Severe sharp pain right now (8/10)')">Pain 8/10</button>
+            <button type="button" class="quick-reply-pill" onclick="App.sendQuickMessage('Bleeding has not stopped yet')">Bleeding ongoing</button>
+            <button type="button" class="quick-reply-pill" onclick="App.sendQuickMessage('Flushed eye with saline for 10 mins')">Flushed with water</button>
+            <button type="button" class="quick-reply-pill" onclick="App.sendQuickMessage('Cannot bear weight on leg after stairs fall')">Cannot bear weight</button>
+          </div>
+
+          <!-- Injury Photo Preview -->
+          <div class="injury-preview-bar" id="injuryPreviewBar" style="display: none;">
+            <img src="" id="injuryPreviewImg" alt="Injury Preview">
+            <span class="preview-name" id="injuryPreviewName">injury.jpg</span>
+            <button class="btn-remove-preview" onclick="App.clearInjuryPhoto()">✕</button>
+          </div>
+
+          <!-- Chat Input Row -->
+          <form class="chat-input-form" onsubmit="App.handleChatMessageSubmit(event)">
+            <input type="file" id="injuryPhotoInput" accept="image/jpeg,image/png" style="display:none" onchange="App.handleInjuryPhotoUpload(this)">
+            <button type="button" class="btn-attach-photo" onclick="document.getElementById('injuryPhotoInput').click()" title="Send photo of eye / injury">
+              📷 Photo
+            </button>
+            <input type="text" id="chatTextInput" placeholder="Type symptom, question, or update..." autocomplete="off">
+            <button type="submit" class="btn-send-msg">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </form>
+        </aside>
+
+      </div>
+
+      <!-- Video Call Bottom Control Bar -->
+      <div class="video-call-controls">
+        <button class="control-btn" id="btnToggleMic" onclick="App.toggleMicrophone()" title="Toggle Microphone">
+          <span class="icon">🎙️</span>
+          <span class="lbl">Mute</span>
+        </button>
+
+        <button class="control-btn" id="btnToggleVideo" onclick="App.toggleCamera()" title="Toggle Camera">
+          <span class="icon">📹</span>
+          <span class="lbl">Stop Video</span>
+        </button>
+
+        <button class="control-btn" onclick="App.toggleChatDrawer()" title="Open Chat Drawer">
+          <span class="icon">💬</span>
+          <span class="lbl">Chat & Photos</span>
+        </button>
+
+        <!-- Doctor Prescribe Button -->
+        <button class="control-btn" id="btnDoctorRxDock" onclick="App.openDoctorPrescriptionModal()" title="Doctor Clinical Assessment & Rx">
+          <span class="icon">📝</span>
+          <span class="lbl">Prescription</span>
+        </button>
+
+        <button class="control-btn er-alert-btn" onclick="App.emergencyEscalationAlert()" title="Emergency Escalation">
+          <span class="icon">🚨</span>
+          <span class="lbl">Call 112 / ER</span>
+        </button>
+
+        <button class="control-btn end-call-btn" onclick="App.requestEndConsultation()" title="Disconnect Call">
+          <span class="icon">📞</span>
+          <span class="lbl">Disconnect</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DOCTOR PRESCRIPTION & CLINICAL AUTHORING SHEET             -->
+  <!-- (DOCTOR ENTERS CLINICAL ASSESSMENT, DIAGNOSIS & SIGNS)            -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="doctorPrescriptionAuthorModal" style="display: none;">
+    <div class="modal-card wide-modal">
+      <div class="modal-header">
+        <div class="modal-header-icon">🩺</div>
+        <div>
+          <h2>Doctor Clinical Assessment & Digital Prescription Slip</h2>
+          <p>Review the patient's condition, enter clinical diagnosis, issue first-aid instructions, prescribe medication, and digitally sign.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeDoctorPrescriptionModal()">✕</button>
+      </div>
+
+      <form id="doctorPrescriptionForm" onsubmit="App.submitDoctorPrescription(event)">
+        <div class="form-grid">
+          
+          <div class="form-field full-width">
+            <label for="rxClinicalAssessment">Clinical Assessment / Findings *</label>
+            <textarea id="rxClinicalAssessment" rows="2" required placeholder="Describe visual inspection of injured area, patient responsiveness, and trauma assessment...">Visual examination via high-definition emergency video consult. Mild conjunctival injection in left eye, no visible foreign body perforation, corneal reflex intact.</textarea>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="rxDiagnosis">Clinical Diagnosis / Impression *</label>
+            <input type="text" id="rxDiagnosis" required placeholder="e.g. Chemical Conjunctivitis / Suspected Grade-1 Ankle Sprain" value="Acute Chemical Conjunctival Irritation (Mild)">
+          </div>
+
+          <div class="form-field full-width">
+            <label for="rxFirstAidInstructions">Immediate First-Aid Instructions *</label>
+            <textarea id="rxFirstAidInstructions" rows="2" required placeholder="Specific first aid steps patient must take right now...">Continuous saline eye irrigation for another 10 minutes. Strict zero-friction rule: DO NOT rub or press the eye. Wear protective sunglasses indoors.</textarea>
+          </div>
+
+          <div class="form-field full-width">
+            <label>Emergency Medications & Dosages Prescribed (Clinically Reviewed)</label>
+            <table class="rx-meds-table" id="rxMedsEditTable">
+              <thead>
+                <tr>
+                  <th>Medication / Drop Name</th>
+                  <th>Dosage & Frequency</th>
+                  <th>Clinical Instructions</th>
+                </tr>
+              </thead>
+              <tbody id="rxMedsEditTbody">
+                <tr>
+                  <td><input type="text" value="Carboxymethylcellulose 0.5% Eye Drops" required></td>
+                  <td><input type="text" value="1 drop every 2 hours" required></td>
+                  <td><input type="text" value="Sterile soothing drops. Do not touch nozzle." required></td>
+                </tr>
+                <tr>
+                  <td><input type="text" value="Paracetamol 500mg (SOS)" required></td>
+                  <td><input type="text" value="1 tablet every 6-8 hours for pain" required></td>
+                  <td><input type="text" value="Take after food with water if throbbing pain." required></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="rxFollowUp">Follow-up Instructions & Warning Signs</label>
+            <input type="text" id="rxFollowUp" value="If vision blur or severe pain increases over the next 2 hours, proceed directly to Emergency Eye Trauma Hospital.">
+          </div>
+
+          <div class="form-field full-width">
+            <label for="rxReferral">Hospital / Physical ER Referral (if required)</label>
+            <input type="text" id="rxReferral" placeholder="e.g. Metro Eye & Trauma ER (Physical Exam Required)" value="Metro Eye Trauma Center (Optional standby if symptoms worsen)">
+          </div>
+
+          <div class="form-field full-width check-group">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="rxSignConsent" checked required>
+              <span>I, as the licensed medical practitioner, certify that I have conducted this consultation and digitally authenticate this emergency prescription slip.</span>
+            </label>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="App.closeDoctorPrescriptionModal()">Cancel</button>
+          <button type="submit" class="btn-primary large">
+            ✓ Authenticate, Sign & Issue Prescription →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- MODAL: FINALIZED PRESCRIPTION & FIRST AID RECEIPT SLIP            -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="consultationSummaryModal" style="display: none;">
+    <div class="modal-card wide-modal prescription-slip">
+      <div class="summary-top-banner">
+        <div class="check-success-icon">✓</div>
+        <div>
+          <h2>Consultation Concluded & Authenticated Prescription Issued</h2>
+          <p>The doctor has concluded the video triage, entered the clinical diagnosis, and digitally signed this official document.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeSummaryModal()">✕</button>
+      </div>
+
+      <div class="rx-card-paper" id="printableSummary">
+        <div class="rx-header">
+          <div class="rx-hospital-brand">
+            <h3>DocUrgent 24/7 Telehealth Network</h3>
+            <p>Official Emergency Triage & First-Aid Guidance Slip</p>
+          </div>
+          <div class="rx-stamp" id="summaryStamp">VERIFIED & SIGNED</div>
+        </div>
+
+        <div class="rx-meta-grid">
+          <div><strong>Consulting Doctor:</strong> <span id="summaryDocName">Dr. Sarah Jenkins, MD</span></div>
+          <div><strong>Qualifications:</strong> <span id="summaryDocDegree">MBBS, MS (Ophthalmology)</span></div>
+          <div><strong>Hospital:</strong> <span id="summaryDocHospital">Metro Eye & Trauma Center</span></div>
+          <div><strong>License Reg No:</strong> <span id="summaryDocReg">MED-OPHTH-88219</span></div>
+          <div><strong>Patient Name:</strong> <span id="summaryPatientName">Emergency Patient</span></div>
+          <div><strong>Consultation ID:</strong> <span id="summaryConsultationId">CONS-9481</span></div>
+          <div><strong>Consultation Duration:</strong> <span id="summaryDuration">06:42 mins</span></div>
+          <div><strong>Digital Signature Hash:</strong> <span id="summarySigHash" style="font-family:monospace; color:#0369a1;">A9F4-9821-B341</span></div>
+        </div>
+
+        <hr class="rx-divider">
+
+        <div class="rx-section">
+          <h4>Clinical Assessment & Diagnosis:</h4>
+          <p class="rx-text" id="summaryDiagnosis">
+            Acute Ocular Trauma / Chemical Irritation Triage. Evaluated for corneal abrasion and conjunctival injection via emergency video feed.
+          </p>
+        </div>
+
+        <div class="rx-section highlight-box">
+          <h4>Doctor's Immediate First-Aid Instructions:</h4>
+          <ul class="first-aid-bullets" id="summaryInstructions">
+            <li>Continuous Saline Irrigation: Flush eye gently for at least 15 minutes.</li>
+            <li>Zero Friction Rule: Do NOT rub, press, or patch the eye tightly.</li>
+          </ul>
+        </div>
+
+        <div class="rx-section">
+          <h4>Prescribed Emergency Medications:</h4>
+          <table class="rx-meds-table">
+            <thead>
+              <tr>
+                <th>Medication / Drop Name</th>
+                <th>Dosage & Frequency</th>
+                <th>Instructions</th>
+              </tr>
+            </thead>
+            <tbody id="summaryMedsTable">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Referral if issued -->
+        <div class="rx-section" id="summaryReferralBox" style="display:none;">
+          <h4 style="color:#dc2626;">Hospital / Physical ER Referral:</h4>
+          <p class="rx-text" id="summaryReferralText"></p>
+        </div>
+
+        <!-- Itemized Transparent Payment Receipt -->
+        <div class="rx-fee-receipt">
+          <div class="fee-receipt-row">
+            <span>Doctor Consultation Fee:</span>
+            <span id="summaryDocFee">₹850.00</span>
+          </div>
+          <div class="fee-receipt-row">
+            <span>Platform Emergency Server & Triage Cut (15%):</span>
+            <span id="summaryPlatformFee">₹150.00</span>
+          </div>
+          <div class="fee-receipt-row total">
+            <span>Total Paid by Patient (Sandbox Confirmed):</span>
+            <span id="summaryTotalFee">₹1,000.00</span>
+          </div>
+          <div class="fee-receipt-row" style="margin-top:6px; font-size:11px; color:#64748b;">
+            <span>Transaction Ref: <strong id="summaryTxnRef">TXN-DOC-20261111-8401</strong></span>
+            <span>Payment Status: <strong style="color:#16a34a;">Completed</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="window.print()">🖨️ Print / Save Prescription (PDF)</button>
+        <button class="btn-primary" onclick="App.closeSummaryModal()">Back to Directory</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DOCTOR CALL ALERT TOAST (INCOMING CALL FOR DOCTORS)        -->
+  <!-- ================================================================= -->
+  <div class="doctor-incoming-modal" id="incomingCallModal" style="display: none;">
+    <div class="incoming-card">
+      <div class="incoming-radar">
+        <div class="wave wave1"></div>
+        <div class="wave wave2"></div>
+        <div class="incoming-icon">🚨</div>
+      </div>
+      <div class="incoming-body">
+        <div class="incoming-badge">INCOMING EMERGENCY VIDEO CALL</div>
+        <h3 id="incomingPatientName">Patient: Alex R.</h3>
+        <p class="incoming-injury" id="incomingPatientInjury">Reported Issue: <strong>Fell from stairs — severe knee swelling</strong></p>
+        <div class="incoming-fee">Consultation Fee: <span id="incomingCallFee">₹1,000</span> <small>(Doctor: ₹850 | App: ₹150)</small></div>
+      </div>
+      <div class="incoming-controls">
+        <button class="btn-decline-call" onclick="App.declineIncomingCall()">Decline</button>
+        <button class="btn-accept-call" onclick="App.acceptIncomingCall()">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Accept Video Call Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>

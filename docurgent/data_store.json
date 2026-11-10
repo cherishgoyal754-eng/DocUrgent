@@ -1,0 +1,12 @@
+{
+  "doctors": [
+    {
+      "id": "doc-test-1",
+      "name": "Dr. Testing MD",
+      "specialty": "Ophthalmology",
+      "hospital": "City Hospital",
+      "consultationFee": 40
+    }
+  ],
+  "consultations": []
+}
