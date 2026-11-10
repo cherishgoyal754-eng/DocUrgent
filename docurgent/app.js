@@ -1512,6 +1512,45 @@ const App = {
     }
   },
 
+  openDoctorLoginModal() {
+    const modal = document.getElementById('doctorLoginModal');
+    if (modal) modal.style.display = 'flex';
+  },
+
+  closeDoctorLoginModal() {
+    const modal = document.getElementById('doctorLoginModal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async submitDoctorLogin(event) {
+    event.preventDefault();
+    const email = document.getElementById('doctorLoginEmail').value.trim();
+    const password = document.getElementById('doctorLoginPassword').value;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: email, password: password })
+      });
+      const data = await res.json();
+      if (data.success && data.session) {
+        state.authToken = data.session.token;
+        state.currentUser = data.session;
+        state.currentDoctor = data.session.doctor;
+        sessionStorage.setItem(STORAGE_KEYS.TOKEN, state.authToken);
+        sessionStorage.setItem(STORAGE_KEYS.ROLE, 'doctor');
+        this.closeDoctorLoginModal();
+        state.currentRole = 'doctor';
+        this.renderScreen();
+      } else {
+        alert(data.error || 'Invalid doctor login credentials');
+      }
+    } catch (e) {
+      alert('Error during doctor login: ' + e.message);
+    }
+  },
+
   openAdminLoginModal() {
     const modal = document.getElementById('adminLoginModal');
     if (modal) modal.style.display = 'flex';
@@ -2172,28 +2211,6 @@ const App = {
       alert('Error updating status: ' + e.message);
     }
   },
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/doctor-verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${state.authToken}`
-        },
-        body: JSON.stringify({
-          doctor_id: docId,
-          status: newStatus,
-          notes: 'Status updated via Admin Portal'
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`Doctor status successfully updated to: ${newStatus.toUpperCase()}`);
-        this.fetchAdminData();
-      }
-    } catch (e) {
-      alert('Error updating status: ' + e.message);
-    }
-  },
 
   // ============================================================================
   // AUDIO EFFECTS (WEB AUDIO API)
@@ -2226,10 +2243,16 @@ const App = {
   }
 };
 
+window.App = App;
+
 function round(val, decimals) {
   return Number(Math.round(val + 'e' + decimals) + 'e-' + decimals);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+  });
+} else {
   App.init();
-});
+}
