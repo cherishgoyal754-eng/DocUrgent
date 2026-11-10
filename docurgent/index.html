@@ -693,8 +693,20 @@
         </div>
       </section>
 
-      <!-- DOCTOR VERIFICATION TABLE -->
-      <section class="doctor-history-section">
+      <!-- SUB-NAV TAB PILLS (Integrated into existing theme) -->
+      <div class="admin-tab-nav" style="display: flex; gap: 8px; margin: 24px 0 16px; overflow-x: auto; padding-bottom: 4px;">
+        <button class="filter-pill active" id="tabBtn-doctors" onclick="App.switchAdminTab('doctors', event)">🩺 Doctor Verifications</button>
+        <button class="filter-pill" id="tabBtn-patients" onclick="App.switchAdminTab('patients', event)">👥 Patients & PHI</button>
+        <button class="filter-pill" id="tabBtn-consultations" onclick="App.switchAdminTab('consultations', event)">🏥 Consultations Queue</button>
+        <button class="filter-pill" id="tabBtn-finance" onclick="App.switchAdminTab('finance', event)">💰 Finance & Payouts</button>
+        <button class="filter-pill" id="tabBtn-settings" onclick="App.switchAdminTab('settings', event)">⚙️ System & Super Admin</button>
+        <button class="filter-pill" id="tabBtn-storage" onclick="App.switchAdminTab('storage', event)">🗄️ Storage & DB Health</button>
+        <button class="filter-pill" id="tabBtn-backups" onclick="App.switchAdminTab('backups', event)">💾 Backups & Recovery</button>
+        <button class="filter-pill" id="tabBtn-audit" onclick="App.switchAdminTab('audit', event)">🛡️ Compliance Audit</button>
+      </div>
+
+      <!-- TAB 1: DOCTOR VERIFICATION TABLE (ACTIVE BY DEFAULT) -->
+      <section id="adminSectionDoctors" class="doctor-history-section">
         <div class="section-title-row">
           <div>
             <h3>Doctor Credential Verifications & Document Audit</h3>
@@ -722,9 +734,240 @@
         </div>
       </section>
 
-      <!-- AUDIT LOGS -->
-      <section class="doctor-history-section" style="margin-top: 24px;">
-        <h3>Telehealth Compliance Audit Logs</h3>
+      <!-- TAB 2: PATIENTS & PHI DIRECTORY -->
+      <section id="adminSectionPatients" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>Patient Emergency Directory & Protected Health Records (PHI)</h3>
+            <p>Review patient demographics and access full clinical records with audited justification.</p>
+          </div>
+        </div>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Patient Name</th>
+                <th>Age</th>
+                <th>Phone</th>
+                <th>Emergency Contact</th>
+                <th>Registered Date</th>
+                <th>Total Consultations</th>
+                <th>Clinical Record Access</th>
+              </tr>
+            </thead>
+            <tbody id="adminPatientTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3: CONSULTATIONS QUEUE -->
+      <section id="adminSectionConsultations" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>Platform Emergency Consultations & Triage Queue</h3>
+            <p>Live status of all emergency calls across specialties.</p>
+          </div>
+        </div>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Consultation ID</th>
+                <th>Patient</th>
+                <th>Assigned Doctor</th>
+                <th>Category</th>
+                <th>Fee</th>
+                <th>Status</th>
+                <th>Payment Status</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="adminConsultationsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: FINANCE & DOCTOR PAYOUTS -->
+      <section id="adminSectionFinance" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>Financial Ledger, Payouts & Commission Management</h3>
+            <p>Monitor platform fees, doctor payouts, refund requests, and gateway transactions.</p>
+          </div>
+        </div>
+
+        <!-- Super Admin Commission Control Card -->
+        <div class="metric-card" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h4 style="margin: 0 0 4px 0; color: var(--text-main);">Platform Commission Rate</h4>
+            <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Default split: 85% to verified doctors, 15% to DocUrgent platform operations.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <input type="number" id="settingCommissionInput" min="0" max="50" step="1" value="15" style="width: 80px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-weight: 600;">
+            <span style="font-weight: 600;">%</span>
+            <button class="btn-primary" onclick="App.updateCommissionRate()" id="btnSaveCommission" style="padding: 8px 16px;">Save Commission</button>
+          </div>
+        </div>
+
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Txn Ref</th>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Total Fee</th>
+                <th>Doctor Payout</th>
+                <th>Platform Cut</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminFinanceTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 5: SYSTEM SETTINGS & SUPER ADMIN -->
+      <section id="adminSectionSettings" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>System Settings & Administrator Access Management</h3>
+            <p>Super Admin platform controls, maintenance mode lockdown, and administrator accounts.</p>
+          </div>
+          <button class="btn-primary" onclick="App.openNewAdminModal()" style="padding: 8px 16px;">+ Provision New Administrator</button>
+        </div>
+
+        <!-- Maintenance Mode Toggle Card -->
+        <div class="metric-card" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h4 style="margin: 0 0 4px 0; color: var(--text-main);">Emergency Platform Maintenance Mode</h4>
+            <p style="margin: 0; color: var(--text-muted); font-size: 13px;">When active, patient and doctor portals display a maintenance notice, while administrators retain full access.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span id="maintenanceStatusLabel" style="font-weight: 600; color: #16a34a;">OFF (Online)</span>
+            <button class="btn-secondary" id="btnToggleMaintenance" onclick="App.toggleMaintenanceMode()" style="padding: 8px 16px;">Toggle Maintenance</button>
+          </div>
+        </div>
+
+        <h4 style="margin: 20px 0 12px 0;">Platform Administrators</h4>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Admin Email</th>
+                <th>Phone</th>
+                <th>Role Authority</th>
+                <th>MFA Status</th>
+                <th>Last Login</th>
+                <th>Status</th>
+                <th>Account Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminAccountsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 6: STORAGE & DATABASE HEALTH -->
+      <section id="adminSectionStorage" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>Storage Quota Monitoring & SQLite Database Health</h3>
+            <p>Live health metrics, file upload storage limits, and database optimization.</p>
+          </div>
+          <button class="btn-secondary" onclick="App.runDatabaseVacuum()" style="padding: 8px 16px;">⚡ Run VACUUM & Optimize DB</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="metric-card">
+            <span class="metric-label">Private Uploads Storage</span>
+            <span class="metric-value" id="storageUsedValue">0.00 MB</span>
+            <span class="metric-hint" id="storageQuotaHint">Quota: 5000 MB (0% used)</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Storage Alert Level</span>
+            <span class="metric-value" id="storageAlertValue" style="color: #16a34a;">NORMAL</span>
+            <span class="metric-hint">Alert triggers at 70%, 85%, 95%</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Database File Size</span>
+            <span class="metric-value" id="dbSizeValue">0.00 MB</span>
+            <span class="metric-hint" id="dbEngineHint">SQLite3 WAL Mode</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">DB Integrity Status</span>
+            <span class="metric-value" id="dbIntegrityValue" style="color: #16a34a;">OK</span>
+            <span class="metric-hint">PRAGMA integrity_check passed</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: BACKUPS & RECOVERY -->
+      <section id="adminSectionBackups" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>Automated Backups & Disaster Recovery Status</h3>
+            <p>Point-in-time database snapshots, compressed file archives, and SHA-256 integrity checks.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-secondary" onclick="App.verifyLatestBackup()" style="padding: 8px 16px;">✓ Verify Integrity</button>
+            <button class="btn-primary" onclick="App.triggerInstantBackup()" style="padding: 8px 16px;">+ Create Backup Now</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="metric-card">
+            <span class="metric-label">Last Database Backup</span>
+            <span class="metric-value" id="lastBackupTimeValue" style="font-size: 16px; margin: 8px 0;">Never</span>
+            <span class="metric-hint" id="lastBackupStatusHint">Status: Pending first snapshot</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Next Scheduled Backup</span>
+            <span class="metric-value" style="font-size: 16px; margin: 8px 0;">Daily at 02:00 UTC</span>
+            <span class="metric-hint">Automated retention: 7 days</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Archived Snapshots Count</span>
+            <span class="metric-value" id="backupCountValue">0</span>
+            <span class="metric-hint">Independent DB & Media archives</span>
+          </div>
+        </div>
+
+        <h4>Recent Point-in-Time Database Snapshots</h4>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Snapshot Filename</th>
+                <th>Size</th>
+                <th>Created At (UTC)</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="adminBackupsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 8: AUDIT LOGS & ERROR TELEMETRY -->
+      <section id="adminSectionAudit" class="doctor-history-section" style="display: none;">
+        <div class="section-title-row">
+          <div>
+            <h3>Telehealth Regulatory Compliance Audit Trail</h3>
+            <p>Immutable log of every user authentication, consultation, signature, and admin action.</p>
+          </div>
+        </div>
         <div class="history-table-container">
           <table class="history-table">
             <thead>
@@ -1261,6 +1504,109 @@
           Accept Video Call Now
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: PLATFORM ADMINISTRATOR AUTHENTICATION                      -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="adminLoginModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon">🛡️</div>
+        <div>
+          <h2>Administrator Portal Login</h2>
+          <p>Restricted access for Medical Directors and Platform Super Admin.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeAdminLoginModal()">✕</button>
+      </div>
+
+      <form id="adminLoginForm" onsubmit="App.submitAdminLogin(event)">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label>Administrator Email *</label>
+            <input type="email" id="adminLoginEmail" required placeholder="owner@docurgent.in" class="form-input">
+          </div>
+          <div class="form-field full-width">
+            <label>Password *</label>
+            <input type="password" id="adminLoginPassword" required placeholder="Enter administrator password" class="form-input">
+          </div>
+          <div class="form-field full-width" id="adminMfaField">
+            <label>Two-Factor Authentication (MFA) / Recovery Code</label>
+            <input type="text" id="adminLoginMfa" placeholder="6-digit TOTP code or emergency recovery code" class="form-input">
+            <small style="color: var(--text-muted); font-size: 11px;">Required if Multi-Factor Authentication is enabled on your account.</small>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="App.closeAdminLoginModal()">Cancel</button>
+          <button type="submit" class="btn-primary">
+            Authenticate & Access Portal →
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: AUDITED PHI MEDICAL RECORD INSPECTION                      -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="adminPhiModal" style="display: none;">
+    <div class="modal-card wide-modal">
+      <div class="modal-header">
+        <div class="modal-header-icon">🔒</div>
+        <div>
+          <h2>Protected Health Information (PHI) — Audited Inspection</h2>
+          <p>HIPAA & Telemedicine Compliance: All medical record access is cryptographically audited.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeAdminPhiModal()">✕</button>
+      </div>
+
+      <div id="adminPhiContent" style="padding: 16px 0; max-height: 60vh; overflow-y: auto;">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="App.closeAdminPhiModal()">Close Record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: PROVISION NEW ADMINISTRATOR (SUPER ADMIN ONLY)              -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="adminNewAdminModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-header-icon">👤</div>
+        <div>
+          <h2>Create Platform Administrator Account</h2>
+          <p>Super Admin Authority: Provision verified medical board oversight credentials.</p>
+        </div>
+        <button class="btn-close-modal" onclick="App.closeNewAdminModal()">✕</button>
+      </div>
+
+      <form id="adminNewAdminForm" onsubmit="App.submitCreateAdministrator(event)">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label>New Administrator Email *</label>
+            <input type="email" id="newAdminEmail" required placeholder="clinical.director@docurgent.in" class="form-input">
+          </div>
+          <div class="form-field full-width">
+            <label>Phone Number</label>
+            <input type="text" id="newAdminPhone" placeholder="+919876543210" class="form-input">
+          </div>
+          <div class="form-field full-width">
+            <label>Initial Secure Password *</label>
+            <input type="password" id="newAdminPassword" required placeholder="Minimum 10 chars with uppercase & symbol" class="form-input">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="App.closeNewAdminModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Provision Administrator Account</button>
+        </div>
+      </form>
     </div>
   </div>
 

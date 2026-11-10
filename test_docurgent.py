@@ -50,14 +50,19 @@ def make_request(path, method="GET", data=None, token=None):
     
     try:
         with urllib.request.urlopen(req) as response:
-            res_body = response.read().decode("utf-8")
-            return response.status, json.loads(res_body) if res_body else {}
+            raw = response.read()
+            try:
+                res_body = raw.decode("utf-8")
+                return response.status, json.loads(res_body) if res_body else {}
+            except Exception:
+                return response.status, {"raw_bytes_len": len(raw)}
     except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8")
+        err_raw = e.read()
         try:
+            err_body = err_raw.decode("utf-8")
             return e.code, json.loads(err_body)
         except Exception:
-            return e.code, {"error": err_body}
+            return e.code, {"error": str(err_raw)}
 
 def run_tests():
     print("=" * 70)
@@ -438,8 +443,164 @@ with server.socketserver.TCPServer(('', {TEST_PORT}), server.DocUrgentHTTPHandle
             assert e.code == 400
         print("  ✓ Edge cases, missing fields & malformed payloads handled safely")
 
+        # 22. Super Admin Bootstrap & Login with RFC 6238 TOTP Multi-Factor Authentication
+        print("\n[22/32] Testing Super Admin Bootstrap & Login with RFC 6238 MFA...")
+        sys.path.insert(0, os.path.join(DIRECTORY, "docurgent"))
+        import db, backup_manager
+        superadmin_email = "owner@docurgent.in"
+        conn = db.get_connection()
+        c = conn.cursor()
+        c.execute("SELECT mfa_secret FROM users WHERE role = 'super_admin' AND email = ?", (superadmin_email,))
+        s_row = c.fetchone()
+        conn.close()
+        assert s_row and s_row['mfa_secret'], "Super admin with MFA secret must exist"
+        totp_code = db.get_totp_code(s_row['mfa_secret'])
+        status, res = make_request("/api/auth/login", method="POST", data={
+            "identifier": superadmin_email,
+            "password": "OwnerDocUrgent2026!#",
+            "mfa_code": totp_code
+        })
+        assert status == 200, f"Super Admin login failed: {res}"
+        assert res["session"]["role"] == "super_admin"
+        superadmin_token = res["session"]["token"]
+        print("  ✓ Super Admin authenticated successfully with RFC 6238 6-digit TOTP")
+
+        # 23. Role Privilege Escalation Defense
+        print("\n[23/32] Testing Privilege Escalation Defense (Admin cannot change Super Admin settings)...")
+        # Standard admin attempts to alter system settings
+        status, res = make_request("/api/admin/settings", method="POST", token=admin_token, data={
+            "settings": {"platform_commission_percent": "35"}
+        })
+        assert status == 403, f"Standard admin must NOT be able to change platform settings (got {status})"
+        # Standard admin attempts to create another admin
+        status, res = make_request("/api/admin/administrators", method="POST", token=admin_token, data={
+            "email": "hacker@docurgent.org", "password": "InsecurePass1!"
+        })
+        assert status == 403, "Standard admin must NOT be able to create administrator accounts"
+        print("  ✓ Privilege escalation strictly blocked: Only Super Admin can alter system configuration")
+
+        # 24. Health Check API Telemetry & Metrics
+        print("\n[24/32] Testing Health Check API Telemetry & Metrics...")
+        status, res = make_request("/api/health")
+        assert status == 200, f"Health check failed: {res}"
+        assert res["status"] == "healthy"
+        assert res["database"]["integrity_status"] == "ok"
+        assert res["storage"]["alert_level"] in ("NORMAL", "NOTICE")
+        assert res["uptime_seconds"] >= 0
+        print(f"  ✓ System telemetry verified: DB Integrity OK ({res['database']['size_mb']}MB), Storage {res['storage']['alert_level']}")
+
+        # 25. Short-Lived Signed File URL Generation & Expiration Security
+        print("\n[25/32] Testing Short-Lived Signed File URL Generation & Expiration...")
+        uploaded_filename = os.path.basename(photo_url)
+        signed_path = db.generate_signed_file_url(uploaded_filename, expires_in_seconds=60)
+        status, _ = make_request(signed_path)
+        assert status == 200, "Signed file download failed"
+        # Test tampered token rejection
+        tampered_path = signed_path.replace("token=", "token=tampered_")
+        status, _ = make_request(tampered_path)
+        assert status == 401, "Tampered signed link must be rejected with 401"
+        # Test expired token rejection
+        expired_path = db.generate_signed_file_url(uploaded_filename, expires_in_seconds=-10)
+        status, _ = make_request(expired_path)
+        assert status == 401, "Expired signed link must be rejected with 401"
+        print("  ✓ Short-lived signed file security verified (tamper & expiry defenses validated)")
+
+        # 26. Point-in-Time Online Database Backup & Integrity Verification
+        print("\n[26/32] Testing Online Point-in-Time Database Backup & SHA-256 Checksum...")
+        db_snap = backup_manager.create_database_backup()
+        assert db_snap["success"] is True, f"Backup creation failed: {db_snap}"
+        is_valid, msg = backup_manager.verify_backup(db_snap["path"])
+        assert is_valid is True, f"Backup integrity check failed: {msg}"
+        print(f"  ✓ Database point-in-time snapshot created and verified: {db_snap['filename']}")
+
+        # 27. Platform Maintenance Mode Lockdown
+        print("\n[27/32] Testing Platform Maintenance Mode Lockdown & Non-Admin Rejection...")
+        status, res = make_request("/api/admin/settings", method="POST", token=superadmin_token, data={
+            "settings": {"maintenance_mode": "true"}
+        })
+        assert status == 200
+        # Patient attempts to access directory -> 503 Service Unavailable
+        status, res = make_request("/api/doctors", token=patient_token)
+        assert status == 503, f"Expected 503 in maintenance mode, got {status}"
+        assert res.get("maintenance") is True
+        # Admin is still allowed access
+        status, res = make_request("/api/admin/doctors", token=admin_token)
+        assert status == 200, "Admins must retain access during maintenance"
+        # Disable maintenance mode
+        status, res = make_request("/api/admin/settings", method="POST", token=superadmin_token, data={
+            "settings": {"maintenance_mode": "false"}
+        })
+        assert status == 200
+        # Patient access restored
+        status, res = make_request("/api/doctors", token=patient_token)
+        assert status == 200, "Patient access must be restored when maintenance mode is disabled"
+        print("  ✓ Platform maintenance lockdown and graceful recovery verified")
+
+        # 28. Super Admin Configuration Control (Commission Rate Update)
+        print("\n[28/32] Testing Super Admin Configuration Control & Dynamic Split...")
+        status, res = make_request("/api/admin/settings", method="POST", token=superadmin_token, data={
+            "settings": {"platform_commission_percent": "20"}
+        })
+        assert status == 200
+        status, res = make_request("/api/status")
+        assert res.get("platformFeePercent") == 20, "Platform fee should now reflect 20%"
+        # Restore standard 15%
+        make_request("/api/admin/settings", method="POST", token=superadmin_token, data={
+            "settings": {"platform_commission_percent": "15"}
+        })
+        print("  ✓ Super Admin dynamic platform commission management verified")
+
+        # 29. Audited Protected Health Information (PHI) Access
+        print("\n[29/32] Testing Audited PHI Access for Patient Records...")
+        status, res = make_request("/api/admin/patient-records-access", method="POST", token=admin_token, data={
+            "patient_id": patient_id,
+            "reason": "Regulatory Telemedicine Clinical Assessment Audit"
+        })
+        assert status == 200, f"PHI access failed: {res}"
+        assert res["patient"]["name"] == "Meera Sen"
+        assert "audit_notice" in res
+        print("  ✓ Sensitive patient medical records accessed with mandatory clinical audit justification")
+
+        # 30. Administrative Refund Processing
+        print("\n[30/32] Testing Administrative Refund Workflow...")
+        # Fetch payment ID
+        status, res = make_request("/api/admin/payments", token=admin_token)
+        completed_payments = [p for p in res["payments"] if p["status"] == "completed"]
+        assert len(completed_payments) > 0
+        target_payment = completed_payments[0]
+        status, res = make_request("/api/admin/refund", method="POST", token=admin_token, data={
+            "payment_id": target_payment["id"],
+            "reason": "Administrative satisfaction guarantee refund"
+        })
+        assert status == 200
+        assert res["success"] is True
+        print(f"  ✓ Administrative refund issued successfully for {target_payment['transaction_ref']}")
+
+        # 31. Digital Receipt & Itemized Invoice Generation
+        print("\n[31/32] Testing Digital Receipt & Itemized Invoice Generation...")
+        status, res = make_request(f"/api/payments/invoice?transaction_ref={target_payment['transaction_ref']}")
+        assert status == 200
+        inv = res["invoice"]
+        assert "invoice_number" in inv
+        assert inv["platform_name"] == "DocUrgent 24/7 Telemedicine Network"
+        print(f"  ✓ Official digital tax invoice generated: {inv['invoice_number']}")
+
+        # 32. Account Lockout & Brute-Force Defense
+        print("\n[32/32] Testing Account Lockout & Brute-Force Defense...")
+        # Repeatedly send 5 bad passwords for a dummy patient
+        dummy_phone = "+919999990011"
+        make_request("/api/auth/register-patient", method="POST", data={
+            "name": "Lockout Test", "phone": dummy_phone, "password": "OriginalPass1!"
+        })
+        for _ in range(5):
+            make_request("/api/auth/login", method="POST", data={"identifier": dummy_phone, "password": "WrongPassword!"})
+        status, res = make_request("/api/auth/login", method="POST", data={"identifier": dummy_phone, "password": "OriginalPass1!"})
+        assert status in (401, 423), f"Locked account must be rejected (got {status})"
+        assert "locked" in res.get("error", "").lower()
+        print("  ✓ Account lockout defense triggered after repeated failed authentication attempts")
+
         print("\n" + "=" * 70)
-        print("  🎉 ALL 21 DOCURGENT VERIFICATION TESTS PASSED SUCCESSFULLY!")
+        print("  🎉 ALL 32 DOCURGENT VERIFICATION TESTS PASSED SUCCESSFULLY!")
         print("=" * 70)
 
     finally:
