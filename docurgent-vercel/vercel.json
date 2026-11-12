@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "outputDirectory": "public",
+  "functions": {
+    "api/router.py": {
+      "includeFiles": "{server.py,db.py,backup_manager.py,docurgent.db}"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/router?__dp=/api/$1" },
+    { "source": "/uploads/(.*)", "destination": "/api/router?__dp=/uploads/$1" }
+  ]
+}

@@ -52,8 +52,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Node / Packaging (if applicable)
+# Node / Packaging / Deployment (if applicable)
 node_modules/
 dist/
 build/
 *.egg-info/
+.vercel/

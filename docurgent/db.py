@@ -18,16 +18,25 @@ import base64
 import struct
 import hmac
 import time
+import shutil
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("DOCURGENT_DB_PATH") or os.path.join(BASE_DIR, "docurgent.db")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+RUNTIME_DIR = os.path.join("/tmp", "docurgent") if IS_SERVERLESS else BASE_DIR
 
+BUNDLED_DB_PATH = os.path.join(BASE_DIR, "docurgent.db")
+DB_PATH = os.environ.get("DOCURGENT_DB_PATH") or os.path.join(RUNTIME_DIR, "docurgent.db")
+UPLOAD_DIR = os.path.join(RUNTIME_DIR, "uploads")
+BACKUP_DIR = os.path.join(RUNTIME_DIR, "backups")
+
+os.makedirs(RUNTIME_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(BACKUP_DIR, exist_ok=True)
 os.makedirs(os.path.join(BACKUP_DIR, "db"), exist_ok=True)
 os.makedirs(os.path.join(BACKUP_DIR, "files"), exist_ok=True)
+
+if IS_SERVERLESS and not os.path.exists(DB_PATH) and os.path.exists(BUNDLED_DB_PATH):
+    shutil.copy2(BUNDLED_DB_PATH, DB_PATH)
 
 # Security Constants
 HASH_ITERATIONS = 100000
