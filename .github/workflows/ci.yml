@@ -19,7 +19,6 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        cache: 'pip'
 
     - name: Verify Project File Integrity
       run: |
@@ -27,6 +26,7 @@ jobs:
         python3 -m py_compile docurgent/db.py
         python3 -m py_compile docurgent/backup_manager.py
         python3 -m py_compile docurgent/bootstrap_superadmin.py
+        python3 -m py_compile docurgent-vercel/api/router.py
 
     - name: Run Database Migrations & Integrity Check
       run: |
