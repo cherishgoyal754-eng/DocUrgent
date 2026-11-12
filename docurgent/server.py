@@ -53,7 +53,7 @@ def load_dotenv():
 load_dotenv()
 
 PORT = int(os.environ.get("PORT", 8095))
-UPLOAD_DIR = os.path.join(DIRECTORY, "uploads")
+UPLOAD_DIR = db.UPLOAD_DIR
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Initialize database on startup
@@ -120,7 +120,8 @@ def get_auth_user(headers):
 
 class DocUrgentHTTPHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=DIRECTORY, **kwargs)
+        kwargs.setdefault('directory', DIRECTORY)
+        super().__init__(*args, **kwargs)
 
     def get_client_ip(self):
         xff = self.headers.get('X-Forwarded-For')
@@ -150,7 +151,7 @@ class DocUrgentHTTPHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def parse_json_body(self):
-        content_length = int(self.headers.get("Content-Length", 0))
+        content_length = int(self.headers.get("Content-Length") or 0)
         if content_length == 0:
             return {}
         raw = self.rfile.read(content_length).decode('utf-8')

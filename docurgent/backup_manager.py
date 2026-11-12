@@ -24,7 +24,7 @@ sys.path.insert(0, SCRIPT_DIR)
 
 import db
 
-BACKUP_DIR = os.path.join(SCRIPT_DIR, "backups")
+BACKUP_DIR = db.BACKUP_DIR
 DB_BACKUP_DIR = os.path.join(BACKUP_DIR, "db")
 FILES_BACKUP_DIR = os.path.join(BACKUP_DIR, "files")
 
