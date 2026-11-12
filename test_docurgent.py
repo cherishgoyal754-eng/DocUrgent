@@ -166,8 +166,13 @@ with server.socketserver.ThreadingTCPServer(('', {TEST_PORT}), server.DocUrgentH
         assert res["session"]["doctor"]["verification_status"] == "pending_verification", "New doctor MUST start in pending_verification status!"
         print(f"  ✓ Doctor registered with status: {res['session']['doctor']['verification_status']}")
 
-        # 5. Doctor Directory Privacy (Only Verified Doctors Visible to Patients)
-        print("\n[5/21] Testing Doctor Directory Privacy & Verified Status Gate...")
+        # 5. Doctor Directory Privacy & Frontend Filter Queries
+        print("\n[5/21] Testing Doctor Directory Privacy & Frontend Filter Queries...")
+        status, res = make_request("/api/doctors?category=all&specialty=all&available_only=true&max_fee=all&search=")
+        assert status == 200 and res["count"] >= 5, f"Default patient filter query failed: {status} {res}"
+        assert all(d["verification_status"] == "verified" for d in res["doctors"])
+        status, res_bleed = make_request("/api/doctors?category=bleeding")
+        assert status == 200 and res_bleed["count"] >= 1, "Bleeding triage category must map to emergency specialists"
         status, res = make_request("/api/doctors?category=eye")
         assert status == 200
         # Newly registered doctor is still pending, so MUST NOT appear in patient directory
@@ -175,7 +180,7 @@ with server.socketserver.ThreadingTCPServer(('', {TEST_PORT}), server.DocUrgentH
         assert doctor_id not in doc_ids, "Pending unverified doctor must NOT be visible to patients!"
         # Seeded verified doctors SHOULD be present
         assert any(d["id"] == "doc-eye-1" for d in res["doctors"]), "Verified seed doctor missing"
-        print("  ✓ Verified status gate strictly enforced (unverified doctor hidden from directory)")
+        print("  ✓ Verified status gate & frontend filter combinations verified")
 
         # 6. Admin Authentication & Doctor Approval Workflow
         print("\n[6/21] Testing Admin Oversight & Doctor Approval Workflow...")
