@@ -1140,6 +1140,11 @@ class DocUrgentHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     "id": doctor_id,
                     "name": name,
                     "specialty": specialty,
+                    "category": category,
+                    "hospital": hospital,
+                    "avatar": avatar,
+                    "consultation_fee": fee,
+                    "is_available": 1,
                     "verification_status": "pending_verification"
                 }
             },
@@ -1148,9 +1153,10 @@ class DocUrgentHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
     def handle_get_doctors(self, query):
         category = query.get('category', [None])[0]
+        specialty = query.get('specialty', [None])[0]
         max_fee = query.get('max_fee', [None])[0]
         search = query.get('search', [None])[0]
-        only_available = query.get('available', [None])[0]
+        only_available = query.get('available', [None])[0] or query.get('available_only', [None])[0]
 
         conn = db.get_connection()
         c = conn.cursor()
@@ -1158,23 +1164,31 @@ class DocUrgentHTTPHandler(http.server.SimpleHTTPRequestHandler):
         sql = "SELECT * FROM doctors WHERE verification_status = 'verified'"
         params = []
 
-        if category and category != 'all':
-            sql += " AND category = ?"
-            params.append(category)
+        cat_aliases = {'bleeding': 'emergency', 'chest': 'emergency'}
+        effective_cat = None
+        if specialty and specialty != 'all':
+            effective_cat = cat_aliases.get(specialty.lower(), specialty.lower())
+        elif category and category != 'all':
+            effective_cat = cat_aliases.get(category.lower(), category.lower())
 
-        if max_fee:
+        if effective_cat:
+            sql += " AND category = ?"
+            params.append(effective_cat)
+
+        if max_fee and max_fee != 'all':
             try:
+                fee_limit = float(max_fee)
                 sql += " AND consultation_fee <= ?"
-                params.append(float(max_fee))
+                params.append(fee_limit)
             except ValueError:
                 pass
 
-        if search:
-            sql += " AND (name LIKE ? OR specialty LIKE ? OR hospital LIKE ?)"
-            term = f"%{search}%"
-            params.extend([term, term, term])
+        if search and search.strip():
+            sql += " AND (name LIKE ? OR specialty LIKE ? OR hospital LIKE ? OR degrees LIKE ? OR bio LIKE ?)"
+            term = f"%{search.strip()}%"
+            params.extend([term, term, term, term, term])
 
-        if only_available == '1':
+        if only_available in ('1', 'true', 'True', 'yes'):
             sql += " AND is_available = 1"
 
         sql += " ORDER BY is_available DESC, rating DESC, experience_years DESC"

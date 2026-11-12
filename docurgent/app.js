@@ -589,13 +589,24 @@ const App = {
         search: state.filters.search
       });
       const res = await fetch(`${API_BASE}/api/doctors?${params.toString()}`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
       if (data.success) {
         state.doctors = data.doctors;
         this.renderDoctorsGrid();
+      } else {
+        throw new Error(data.error || 'Failed to load verified doctors');
       }
     } catch (e) {
       console.warn('Failed to load doctors from server:', e);
+      const countText = document.getElementById('resultsCountText');
+      if (countText) countText.textContent = 'Unable to load doctors right now — please click Retry.';
+      const grid = document.getElementById('doctorsGrid');
+      if (grid) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:36px;background:#fff;border-radius:16px;border:1px solid #fecaca;"><p style="color:#dc2626;margin-bottom:12px;">Could not load verified doctors (${e.message}).</p><button class="btn-primary" onclick="App.fetchVerifiedDoctors()">Retry</button></div>`;
+      }
     }
   },
 
@@ -707,6 +718,10 @@ const App = {
 
   onSpecialtyChange() {
     state.filters.specialty = document.getElementById('specialtyFilter').value;
+    state.filters.category = state.filters.specialty;
+    document.querySelectorAll('.triage-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.getAttribute('data-category') === state.filters.category);
+    });
     this.fetchVerifiedDoctors();
   },
 
@@ -872,21 +887,46 @@ const App = {
 
     // Register / Authenticate Patient
     try {
-      const regRes = await fetch(`${API_BASE}/api/auth/register-patient`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, age, phone, emergency_contact, allergies,
-          consent_telehealth: true, consent_data: true
-        })
-      });
-      const regData = await regRes.json();
-      if (regData.success && regData.session) {
-        state.authToken = regData.session.token;
-        state.currentUser = regData.session;
-        state.currentPatient = regData.session.patient;
-        sessionStorage.setItem(STORAGE_KEYS.TOKEN, state.authToken);
-        sessionStorage.setItem(STORAGE_KEYS.ROLE, 'patient');
+      const hasMatchingPatientSession = state.authToken &&
+        state.currentUser?.role === 'patient' &&
+        state.currentPatient?.phone === phone;
+
+      if (!hasMatchingPatientSession) {
+        const regRes = await fetch(`${API_BASE}/api/auth/register-patient`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, age, phone, emergency_contact, allergies,
+            consent_telehealth: true, consent_data: true
+          })
+        });
+        const regData = await regRes.json();
+        if (regData.success && regData.session) {
+          state.authToken = regData.session.token;
+          state.currentUser = regData.session;
+          state.currentPatient = regData.session.patient;
+          sessionStorage.setItem(STORAGE_KEYS.TOKEN, state.authToken);
+          sessionStorage.setItem(STORAGE_KEYS.ROLE, 'patient');
+        } else if (regRes.status === 409) {
+          // Returning quick-intake patient lookup
+          const loginRes = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: phone, password: 'PatientPass123!' })
+          });
+          const loginData = await loginRes.json();
+          if (loginData.success && loginData.session) {
+            state.authToken = loginData.session.token;
+            state.currentUser = loginData.session;
+            state.currentPatient = loginData.session.patient || { name, phone };
+            sessionStorage.setItem(STORAGE_KEYS.TOKEN, state.authToken);
+            sessionStorage.setItem(STORAGE_KEYS.ROLE, 'patient');
+          } else {
+            throw new Error(loginData.error || regData.error || 'Account already exists; please sign in or use a different mobile number.');
+          }
+        } else {
+          throw new Error(regData.error || 'Could not register patient details');
+        }
       }
 
       // Create consultation request
@@ -906,23 +946,25 @@ const App = {
         })
       });
       const consData = await consRes.json();
-      if (consData.success) {
-        state.activeConsultation = {
-          id: consData.consultation_id,
-          transaction_ref: consData.transaction_ref,
-          doctor_id: doc.id
-        };
-
-        // Open Video Room
-        this.openVideoConsultationRoom({
-          id: consData.consultation_id,
-          role: 'patient',
-          doctor: doc,
-          patientName: name,
-          condition: state.filters.category,
-          fee: doc.consultation_fee
-        });
+      if (!consRes.ok || !consData.success) {
+        throw new Error(consData.error || 'Could not initiate consultation request');
       }
+
+      state.activeConsultation = {
+        id: consData.consultation_id,
+        transaction_ref: consData.transaction_ref,
+        doctor_id: doc.id
+      };
+
+      // Open Video Room
+      this.openVideoConsultationRoom({
+        id: consData.consultation_id,
+        role: 'patient',
+        doctor: doc,
+        patientName: name,
+        condition: state.filters.category,
+        fee: doc.consultation_fee
+      });
     } catch (err) {
       alert('Error creating consultation: ' + err.message);
     }
