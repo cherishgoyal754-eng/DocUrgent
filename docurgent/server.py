@@ -1092,6 +1092,11 @@ class DocUrgentHTTPHandler(http.server.SimpleHTTPRequestHandler):
             conn.close()
             return self.send_error_json(409, "A doctor with this medical license registration already exists")
 
+        c.execute("SELECT id FROM users WHERE email = ?", (email,))
+        if c.fetchone():
+            conn.close()
+            return self.send_error_json(409, "An account with this email already exists. Please sign in or use a different email.")
+
         user_id = f"user-doc-{uuid.uuid4().hex[:8]}"
         doctor_id = f"doc-{uuid.uuid4().hex[:8]}"
         now = datetime.datetime.utcnow().isoformat()

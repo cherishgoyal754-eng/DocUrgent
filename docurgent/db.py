@@ -20,7 +20,7 @@ import hmac
 import time
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "docurgent.db")
+DB_PATH = os.environ.get("DOCURGENT_DB_PATH") or os.path.join(BASE_DIR, "docurgent.db")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 
@@ -714,7 +714,7 @@ def seed_doctors(conn):
         'id': 'doc-er-1',
         'email': 'elena.rostova@docurgent.org',
         'name': 'Dr. Elena Rostova, MD',
-        'avatar': 'https://images.unsplash.com/photo-1594824813583-02f896b7972b?auto=format&fit=crop&q=80&w=600',
+        'avatar': 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=600',
         'specialty': 'Emergency & Critical Care Medicine',
         'category': 'emergency',
         'degrees': 'MD (Emergency Medicine), Board Certified Emergency Physician, ACLS / ATLS Director',

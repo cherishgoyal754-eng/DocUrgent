@@ -34,6 +34,7 @@ import subprocess
 import time
 import base64
 import sqlite3
+import tempfile
 
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 TEST_PORT = 8098
@@ -73,8 +74,21 @@ def run_tests():
     subprocess.run(f"lsof -iTCP:{TEST_PORT} -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true", shell=True)
     time.sleep(1)
 
-    # Start test server on TEST_PORT
+    # Create isolated temporary database copy so tests never pollute live/demo data
+    live_db = os.path.join(DIRECTORY, "docurgent", "docurgent.db")
+    fd, test_db_path = tempfile.mkstemp(prefix="docurgent_test_", suffix=".db")
+    os.close(fd)
+    src_conn = sqlite3.connect(live_db)
+    dst_conn = sqlite3.connect(test_db_path)
+    with dst_conn:
+        src_conn.backup(dst_conn)
+    dst_conn.close()
+    src_conn.close()
+
+    # Start test server on TEST_PORT with isolated DB
     env = os.environ.copy()
+    env["DOCURGENT_DB_PATH"] = test_db_path
+    os.environ["DOCURGENT_DB_PATH"] = test_db_path
     server_script = os.path.join(DIRECTORY, "docurgent", "server.py")
     
     # Temporarily set PORT to TEST_PORT in command
@@ -87,7 +101,7 @@ server.socketserver.ThreadingTCPServer.allow_reuse_address = True
 with server.socketserver.ThreadingTCPServer(('', {TEST_PORT}), server.DocUrgentHTTPHandler) as httpd:
     httpd.daemon_threads = True
     httpd.serve_forever()
-"""])
+"""], env=env)
     time.sleep(2)
 
     try:
@@ -408,7 +422,7 @@ with server.socketserver.ThreadingTCPServer(('', {TEST_PORT}), server.DocUrgentH
 
         # 19. Direct SQLite Database Integrity & Persistence
         print("\n[19/21] Testing SQLite Database Relational Integrity...")
-        conn = sqlite3.connect(os.path.join(DIRECTORY, "docurgent", "docurgent.db"))
+        conn = sqlite3.connect(test_db_path)
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM consultations WHERE id = ?", (consultation_id,))
         assert c.fetchone()[0] == 1, "Consultation record missing in SQLite"
@@ -608,6 +622,13 @@ with server.socketserver.ThreadingTCPServer(('', {TEST_PORT}), server.DocUrgentH
         proc.terminate()
         proc.wait()
         subprocess.run(f"lsof -iTCP:{TEST_PORT} -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true", shell=True)
+        for suffix in ("", "-wal", "-shm"):
+            p = test_db_path + suffix
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
 
 if __name__ == "__main__":
     run_tests()
