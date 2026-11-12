@@ -770,7 +770,7 @@ const App = {
         <article class="doctor-card ${isAvail ? 'highlight-available' : 'offline'}">
           <div class="doctor-card-top">
             <div class="doctor-avatar-wrap">
-              <img src="${doc.avatar}" alt="${doc.name}" class="doctor-avatar-img">
+              <img src="${doc.avatar}" alt="${doc.name}" class="doctor-avatar-img" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23e0f2fe%22/><text x=%2250%22 y=%2260%22 font-size=%2245%22 text-anchor=%22middle%22>🩺</text></svg>'">
               <span class="doc-status-badge ${isAvail ? 'online' : 'offline'}" title="${isAvail ? 'Available Online' : 'Currently Offline'}"></span>
             </div>
             <div class="doctor-header-details">
